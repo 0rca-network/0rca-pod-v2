@@ -1,71 +1,59 @@
 import React from 'react';
 
 interface GenerativeThumbnailProps {
-  agentName: string;
+  agentName?: string;
   className?: string;
 }
 
 export const GenerativeThumbnail: React.FC<GenerativeThumbnailProps> = ({ agentName, className = '' }) => {
-  const seed = agentName.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-  const random = (index: number) => {
-    const x = Math.sin(seed + index) * 10000;
-    return x - Math.floor(x);
-  };
+  const colorPalettes = [
+    ['#4ECDC4', '#44A08D', '#096A5A', '#E8F8F5'], // Teal family
+    ['#667eea', '#764ba2', '#4B0082', '#E6E6FA'], // Purple family  
+    ['#f093fb', '#f5576c', '#C70039', '#FFE5E5'], // Pink family
+    ['#4facfe', '#00f2fe', '#0077BE', '#E0F6FF'], // Blue family
+    ['#43e97b', '#38f9d7', '#228B22', '#E8F5E8'], // Green family
+    ['#fa709a', '#fee140', '#FF6347', '#FFF8DC'], // Warm family
+    ['#a8edea', '#fed6e3', '#87CEEB', '#F0F8FF'], // Pastel family
+    ['#ff9a9e', '#fecfef', '#FF69B4', '#FFF0F5']  // Rose family
+  ];
 
-  const shapes = Array.from({ length: 8 }, (_, i) => ({
-    cx: random(i * 2) * 100,
-    cy: random(i * 2 + 1) * 100,
-    rx: 20 + random(i * 3) * 40,
-    ry: 20 + random(i * 3 + 1) * 40,
-    opacity: 0.1 + random(i * 4) * 0.3,
-    color: random(i) > 0.5 ? '#63f2d2' : '#BEF264',
-  }));
+  const randomId = Math.random().toString(36).substr(2, 9);
+  const palette = colorPalettes[Math.floor(Math.random() * colorPalettes.length)];
+  const [color1, color2, color3, diffusion] = palette;
 
-  const lines = Array.from({ length: 4 }, (_, i) => ({
-    x1: random(i * 5) * 100,
-    y1: random(i * 5 + 1) * 100,
-    x2: random(i * 5 + 2) * 100,
-    y2: random(i * 5 + 3) * 100,
+  const blobs = Array.from({ length: 6 }, () => ({
+    cx: Math.random() * 120 - 10,
+    cy: Math.random() * 120 - 10,
+    r: 30 + Math.random() * 50,
+    opacity: 0.3 + Math.random() * 0.4,
+    color: [color1, color2, color3][Math.floor(Math.random() * 3)],
   }));
 
   return (
-    <svg className={className} viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+    <svg className={className} viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid slice">
       <defs>
-        <linearGradient id={`grad-${seed}`} x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" style={{ stopColor: '#0D0D0D', stopOpacity: 1 }} />
-          <stop offset="100%" style={{ stopColor: '#1C2A3A', stopOpacity: 1 }} />
-        </linearGradient>
-        <filter id={`glow-${seed}`}>
-          <feGaussianBlur stdDeviation="2" result="coloredBlur" />
-          <feMerge>
-            <feMergeNode in="coloredBlur" />
-            <feMergeNode in="SourceGraphic" />
-          </feMerge>
+        <radialGradient id={`watercolor-${randomId}`} cx="50%" cy="50%" r="70%">
+          <stop offset="0%" style={{ stopColor: diffusion, stopOpacity: 0.9 }} />
+          <stop offset="40%" style={{ stopColor: color1, stopOpacity: 0.6 }} />
+          <stop offset="80%" style={{ stopColor: color2, stopOpacity: 0.8 }} />
+          <stop offset="100%" style={{ stopColor: color3, stopOpacity: 0.9 }} />
+        </radialGradient>
+        <filter id={`blur-${randomId}`}>
+          <feGaussianBlur stdDeviation="3" />
         </filter>
       </defs>
-      <rect width="100" height="100" fill={`url(#grad-${seed})`} />
-      {shapes.map((shape, i) => (
-        <ellipse
+      
+      <rect width="100" height="100" fill={`url(#watercolor-${randomId})`} />
+      
+      {blobs.map((blob, i) => (
+        <circle
           key={i}
-          cx={shape.cx}
-          cy={shape.cy}
-          rx={shape.rx}
-          ry={shape.ry}
-          fill={shape.color}
-          opacity={shape.opacity}
-        />
-      ))}
-      {lines.map((line, i) => (
-        <line
-          key={i}
-          x1={line.x1}
-          y1={line.y1}
-          x2={line.x2}
-          y2={line.y2}
-          stroke="#63f2d2"
-          strokeWidth="0.5"
-          opacity="0.6"
-          filter={`url(#glow-${seed})`}
+          cx={blob.cx}
+          cy={blob.cy}
+          r={blob.r}
+          fill={blob.color}
+          opacity={blob.opacity}
+          filter={`url(#blur-${randomId})`}
         />
       ))}
     </svg>
