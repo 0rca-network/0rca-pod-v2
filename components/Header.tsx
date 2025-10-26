@@ -10,7 +10,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
   const [search, setSearch] = useState('');
 
   return (
-    <header className="bg-black/50 backdrop-blur-lg border-b border-neutral-800 px-6 py-4 relative z-40">
+    <header className="bg-black/50 backdrop-blur-lg border-b border-neutral-800 px-6 py-4">
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <button onClick={onToggleSidebar} className="text-white hover:text-[#63f2d2] transition-colors">
@@ -19,7 +19,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
             </svg>
           </button>
           <Link href="https://0rca.network" target="_blank">
-            <Image src="/0rca-Photoroom.svg" alt="0rca" width={80} height={32} className="h-8 w-auto" />
+            <Image src="/0rca-Photoroom.svg" alt="0rca" width={120} height={48} className="h-12 w-auto" />
           </Link>
         </div>
         <div className="flex-1 max-w-xl">
