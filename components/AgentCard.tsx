@@ -13,7 +13,7 @@ interface AgentCardProps {
 export const AgentCard: React.FC<AgentCardProps> = ({ id, name, developer, credits, tags }) => {
   return (
     <Link href={`/pod/agents/${id}`}>
-      <div className="bg-black/50 backdrop-blur-lg rounded-2xl overflow-hidden hover:ring-2 hover:ring-mint-glow transition-all cursor-pointer group">
+      <div className="bg-neutral-800 rounded-2xl overflow-hidden hover:ring-2 hover:ring-[#63f2d2] transition-all cursor-pointer group">
         <div className="aspect-[4/3] relative">
           <GenerativeThumbnail agentName={name} className="w-full h-full" />
         </div>

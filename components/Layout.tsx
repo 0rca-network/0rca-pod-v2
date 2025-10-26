@@ -12,7 +12,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [sidebarHovered, setSidebarHovered] = useState(false);
 
   return (
-    <div className="flex flex-col h-screen w-screen bg-deep-midnight">
+    <div className="flex flex-col h-screen w-screen bg-black">
       <Header onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
       <div className="flex-1 flex overflow-hidden relative">
         <div
