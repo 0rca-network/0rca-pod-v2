@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
+import { useWallet } from '@txnlab/use-wallet-react';
 import { GenerativeThumbnail } from '@/components/GenerativeThumbnail';
 import { DemoInputModal } from '@/components/DemoInputModal';
 import { agents } from '@/lib/dummy-data';
@@ -9,6 +10,7 @@ export default function AgentDetail() {
   const router = useRouter();
   const { agentId } = router.query;
   const [showModal, setShowModal] = useState(false);
+  const { activeAccount } = useWallet();
 
   const agent = agents.find((a) => a.id === agentId);
 
@@ -57,8 +59,16 @@ export default function AgentDetail() {
             >
               Free Demo
             </button>
-            <button className="px-6 py-3 bg-mint-glow text-black rounded-lg font-semibold hover:opacity-90">
-              Hire Agent
+            <button 
+              className={`px-6 py-3 rounded-lg font-semibold transition-all ${
+                activeAccount 
+                  ? 'bg-mint-glow text-black hover:opacity-90' 
+                  : 'bg-neutral-700 text-neutral-400 cursor-not-allowed'
+              }`}
+              disabled={!activeAccount}
+              title={!activeAccount ? 'Connect wallet to hire agent' : ''}
+            >
+              {activeAccount ? 'Hire Agent' : 'Connect Wallet to Hire'}
             </button>
           </div>
         </div>

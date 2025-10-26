@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { ConnectWalletButton } from './ConnectWalletButton';
 
 interface HeaderProps {
   onToggleSidebar: () => void;
@@ -31,9 +32,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
             className="w-full px-4 py-2 bg-neutral-900 text-white rounded-lg border border-neutral-700 focus:border-[#63f2d2] focus:outline-none"
           />
         </div>
-        <button className="bg-[#63f2d2] text-black px-6 py-2 rounded-lg font-semibold hover:opacity-90 transition-opacity whitespace-nowrap">
-          Connect Wallet
-        </button>
+        <ConnectWalletButton />
       </div>
     </header>
   );

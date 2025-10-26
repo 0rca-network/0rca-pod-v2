@@ -14,7 +14,7 @@ export const AgentCard: React.FC<AgentCardProps> = ({ id, name, developer, credi
   return (
     <Link href={`/pod/agents/${id}`}>
       <div className="bg-neutral-800 rounded-2xl overflow-hidden hover:ring-2 hover:ring-[#63f2d2] transition-all cursor-pointer group">
-        <div className="aspect-[4/3] relative">
+        <div className="aspect-[4/3]">
           <GenerativeThumbnail agentName={name} className="w-full h-full" />
         </div>
         <div className="p-4 space-y-2">

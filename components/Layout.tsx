@@ -13,14 +13,8 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   return (
     <div className="flex h-screen w-screen bg-black">
-      <div
-        className="absolute left-0 top-0 bottom-0 w-4 z-20"
-        onMouseEnter={() => setSidebarHovered(true)}
-      />
-      <div
-        onMouseLeave={() => setSidebarHovered(false)}
-      >
-        <Sidebar isOpen={sidebarOpen || sidebarHovered} />
+      <div>
+        <Sidebar isOpen={sidebarOpen} />
       </div>
       <div className={`flex flex-col flex-1 transition-all duration-300 ${
         sidebarOpen ? 'ml-64' : 'ml-0'

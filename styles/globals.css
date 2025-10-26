@@ -3,13 +3,15 @@
 @tailwind utilities;
 
 html, body {
-  overflow: hidden;
   height: 100%;
   width: 100%;
-  position: fixed;
 }
 
 #__next {
   height: 100%;
   width: 100%;
+}
+
+.relative {
+  position: static !important;
 }
