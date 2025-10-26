@@ -36,9 +36,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen }) => {
       <div className={`p-4 space-y-6 transition-opacity duration-700 ${
         isOpen ? 'opacity-100 delay-200' : 'opacity-0'
       }`}>
-        <button className="w-full bg-[#63f2d2] text-black py-3 rounded-lg font-semibold hover:opacity-90 transition-opacity">
+        <Link href="/deploy" className="block w-full bg-[#63f2d2] text-black py-3 rounded-lg font-semibold hover:opacity-90 transition-opacity text-center">
           Deploy
-        </button>
+        </Link>
 
         <nav className="space-y-1">
           <h3 className="text-neutral-400 text-xs uppercase font-semibold mb-2">Navigation</h3>
