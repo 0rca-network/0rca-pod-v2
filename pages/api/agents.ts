@@ -29,15 +29,40 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Remove user_id from agentData as it will be set by RLS
     const { user_id, ...cleanAgentData } = agentData
 
-    // Create agent record
-    const { data: agent, error: agentError } = await supabase
+    // Check if agent already exists for this repo
+    const { data: existingAgent } = await supabase
       .from('agents')
-      .insert(cleanAgentData)
-      .select()
+      .select('id')
+      .eq('repo_owner', cleanAgentData.repo_owner)
+      .eq('repo_name', cleanAgentData.repo_name)
       .single()
 
-    if (agentError) {
-      return res.status(400).json({ error: agentError.message })
+    let agent
+    if (existingAgent) {
+      // Update existing agent
+      const { data: updatedAgent, error: updateError } = await supabase
+        .from('agents')
+        .update(cleanAgentData)
+        .eq('id', existingAgent.id)
+        .select()
+        .single()
+      
+      if (updateError) {
+        return res.status(400).json({ error: updateError.message })
+      }
+      agent = updatedAgent
+    } else {
+      // Create new agent
+      const { data: newAgent, error: insertError } = await supabase
+        .from('agents')
+        .insert(cleanAgentData)
+        .select()
+        .single()
+      
+      if (insertError) {
+        return res.status(400).json({ error: insertError.message })
+      }
+      agent = newAgent
     }
 
     // Create deployment record
@@ -45,7 +70,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       .from('deployments')
       .insert({
         agent_id: agent.id,
-        ...deploymentData
+        job_id: deploymentData.job_id,
+        status: deploymentData.status || 'pending'
       })
 
     if (deploymentError) {

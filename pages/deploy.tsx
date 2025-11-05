@@ -372,12 +372,22 @@ export default function DeployPage() {
                   
                   {deploymentStatus === 'success' && (
                     <div className="bg-neutral-700 rounded-lg p-4">
-                      <h4 className="text-white font-semibold mb-2">Deployment Summary</h4>
-                      <div className="text-neutral-300 text-sm space-y-1">
-                        <div>• Agent deployed to: <span className="text-[#63f2d2]">{subdomain}.0rca.live</span></div>
-                        <div>• Build completed successfully</div>
+                      <h4 className="text-white font-semibold mb-2">🎉 Deployment Complete!</h4>
+                      <div className="text-neutral-300 text-sm space-y-2 mb-4">
+                        <div>• Agent deployed successfully</div>
                         <div>• SSL certificate configured</div>
                         <div>• Health checks passed</div>
+                      </div>
+                      <div className="bg-green-900 border border-green-600 rounded-lg p-4">
+                        <div className="text-green-400 font-semibold mb-2">🚀 Your agent is now live!</div>
+                        <a 
+                          href={`https://${subdomain}.0rca.live`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[#63f2d2] hover:text-white font-medium text-lg underline"
+                        >
+                          {subdomain}.0rca.live
+                        </a>
                       </div>
                     </div>
                   )}

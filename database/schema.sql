@@ -18,6 +18,7 @@ CREATE TABLE agents (
 CREATE TABLE deployments (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   agent_id UUID REFERENCES agents(id) ON DELETE CASCADE,
+  job_id VARCHAR(255),
   status VARCHAR(50) DEFAULT 'pending',
   build_logs TEXT,
   deployment_summary TEXT,
