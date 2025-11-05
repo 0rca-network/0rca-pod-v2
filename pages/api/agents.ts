@@ -1,5 +1,5 @@
 import { NextApiRequest, NextApiResponse } from 'next'
-import { supabase } from '@/lib/supabase'
+import { createClient } from '@supabase/supabase-js'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -8,11 +8,31 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   try {
     const { agentData, deploymentData } = req.body
+    const authHeader = req.headers.authorization
+    
+    if (!authHeader) {
+      return res.status(401).json({ error: 'Authorization header required' })
+    }
+
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        global: {
+          headers: {
+            Authorization: authHeader
+          }
+        }
+      }
+    )
+
+    // Remove user_id from agentData as it will be set by RLS
+    const { user_id, ...cleanAgentData } = agentData
 
     // Create agent record
     const { data: agent, error: agentError } = await supabase
       .from('agents')
-      .insert(agentData)
+      .insert(cleanAgentData)
       .select()
       .single()
 

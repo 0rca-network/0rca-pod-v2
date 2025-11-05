@@ -34,24 +34,26 @@ export default function DeployPage() {
   const [packages, setPackages] = useState<any[]>([])
   const [selectedPackage, setSelectedPackage] = useState<any>(null)
   const [jobId, setJobId] = useState<string | null>(null)
+  const [needsReauth, setNeedsReauth] = useState(false)
+  const [reposFetched, setReposFetched] = useState(false)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null)
-      if (session?.user) {
+      if (session?.user && !reposFetched) {
         fetchRepos()
       }
     })
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null)
-      if (session?.user) {
+      if (session?.user && !reposFetched) {
         fetchRepos()
       }
     })
 
     return () => subscription.unsubscribe()
-  }, [])
+  }, [reposFetched])
 
   const signInWithGitHub = async () => {
     setLoading(true)
@@ -67,13 +69,22 @@ export default function DeployPage() {
   }
 
   const fetchRepos = async () => {
+    if (reposFetched) return
+    
     const { data: { session } } = await supabase.auth.getSession()
     console.log('Session:', session?.user?.email, 'Token exists:', !!session?.provider_token)
     
     if (!session?.provider_token) {
-      console.log('No provider token found')
+      console.log('No provider token found - clearing session')
+      await supabase.auth.signOut()
+      setUser(null)
+      setRepos([])
+      setNeedsReauth(true)
+      setReposFetched(false)
       return
     }
+    
+    setNeedsReauth(false)
 
     setLoading(true)
     try {
@@ -83,6 +94,7 @@ export default function DeployPage() {
       const data = await res.json()
       console.log('Repos fetched:', data.length, 'repos')
       setRepos(data)
+      setReposFetched(true)
     } catch (error) {
       console.error('Error fetching repos:', error)
     }
@@ -138,9 +150,13 @@ export default function DeployPage() {
           
           if (status.status === 'completed') {
             // Create agent record
+            const { data: { session } } = await supabase.auth.getSession()
             const agentResponse = await fetch('/api/agents', {
               method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
+              headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${session?.access_token}`
+              },
               body: JSON.stringify({
                 agentData: {
                   name: agentName,
@@ -148,8 +164,7 @@ export default function DeployPage() {
                   subdomain,
                   repo_owner: selectedRepo.owner.login,
                   repo_name: selectedRepo.name,
-                  github_url: selectedRepo.html_url,
-                  user_id: user?.id
+                  github_url: selectedRepo.html_url
                 },
                 deploymentData: {
                   status: 'success',
@@ -183,18 +198,23 @@ export default function DeployPage() {
 
   let content
   
-  if (!user) {
+  if (!user || needsReauth) {
     content = (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-4xl font-bold text-white mb-4">Deploy Your Repository</h1>
-          <p className="text-neutral-400 mb-8">Sign in with GitHub to deploy your repositories</p>
+          <p className="text-neutral-400 mb-8">
+            {needsReauth 
+              ? 'Your GitHub session has expired. Please sign in again to access your repositories.' 
+              : 'Sign in with GitHub to deploy your repositories'
+            }
+          </p>
           <button
             onClick={signInWithGitHub}
             disabled={loading}
             className="bg-[#63f2d2] text-black px-8 py-3 rounded-lg font-semibold hover:opacity-90 transition-opacity"
           >
-            {loading ? 'Loading...' : 'Sign in with GitHub'}
+            {loading ? 'Loading...' : needsReauth ? 'Sign in Again' : 'Sign in with GitHub'}
           </button>
         </div>
       </div>
