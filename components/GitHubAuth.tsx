@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { User } from '@supabase/supabase-js'
+import { DeploymentModal } from './DeploymentModal'
+import { DeploymentLogs } from './DeploymentLogs'
 
 interface Repository {
   id: number
@@ -17,6 +19,8 @@ export function GitHubAuth() {
   const [repos, setRepos] = useState<Repository[]>([])
   const [loading, setLoading] = useState(false)
   const [showRepos, setShowRepos] = useState(false)
+  const [selectedRepo, setSelectedRepo] = useState<Repository | null>(null)
+  const [deployingAgentId, setDeployingAgentId] = useState<string | null>(null)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -67,24 +71,30 @@ export function GitHubAuth() {
     setLoading(false)
   }
 
-  const deployRepo = async (repo: Repository) => {
-    const { data: { session } } = await supabase.auth.getSession()
-    if (!session?.provider_token) return
+  const handleRepoSelect = (repo: Repository) => {
+    console.log('Repo selected:', repo.name)
+    setSelectedRepo(repo)
+    setShowRepos(false)
+  }
 
+  const handleDeploy = async (agentData: any) => {
     try {
-      // This would call your Supabase Edge Function
-      const res = await fetch('/api/deploy', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          repo_owner: repo.owner.login,
-          repo_name: repo.name,
-          branch: repo.default_branch,
-          access_token: session.provider_token
-        })
-      })
-      const result = await res.json()
-      console.log('Deployment result:', result)
+      // Create agent record
+      const { data: agent, error } = await supabase
+        .from('agents')
+        .insert(agentData)
+        .select()
+        .single()
+
+      if (error) throw error
+
+      // Create deployment record
+      await supabase
+        .from('deployments')
+        .insert({ agent_id: agent.id })
+
+      setDeployingAgentId(agent.id)
+      setShowRepos(false)
     } catch (error) {
       console.error('Deployment error:', error)
     }
@@ -103,53 +113,70 @@ export function GitHubAuth() {
   }
 
   return (
-    <div className="relative">
-      <div className="flex items-center gap-2">
-        <button
-          onClick={fetchRepos}
-          className="bg-gray-800 text-white px-4 py-2 rounded-lg font-medium hover:bg-gray-700 transition-colors"
-        >
-          My Repos
-        </button>
-        <button
-          onClick={signOut}
-          className="text-neutral-400 hover:text-white text-sm"
-        >
-          Sign Out
-        </button>
+    <>
+      <div className="relative">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={fetchRepos}
+            className="bg-gray-800 text-white px-4 py-2 rounded-lg font-medium hover:bg-gray-700 transition-colors"
+          >
+            My Repos
+          </button>
+          <button
+            onClick={signOut}
+            className="text-neutral-400 hover:text-white text-sm"
+          >
+            Sign Out
+          </button>
+        </div>
+
+        {showRepos && (
+          <div className="absolute top-full right-0 mt-2 w-80 bg-neutral-800 rounded-lg shadow-xl border border-neutral-700 max-h-96 overflow-y-auto z-50">
+            <div className="p-4">
+              <div className="flex justify-between items-center mb-3">
+                <h3 className="text-white font-semibold">Select Repository</h3>
+                <button
+                  onClick={() => setShowRepos(false)}
+                  className="text-neutral-400 hover:text-white"
+                >
+                  ×
+                </button>
+              </div>
+              {loading ? (
+                <div className="text-neutral-400">Loading repositories...</div>
+              ) : (
+                <div className="space-y-2">
+                  {repos.map(repo => (
+                    <div
+                      key={repo.id}
+                      onClick={() => handleRepoSelect(repo)}
+                      className="p-3 bg-neutral-700 rounded-lg cursor-pointer hover:bg-neutral-600 transition-colors"
+                    >
+                      <h4 className="text-white font-medium">{repo.name}</h4>
+                      <p className="text-neutral-400 text-sm">{repo.description || 'No description'}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
-      {showRepos && (
-        <div className="absolute top-full right-0 mt-2 w-80 bg-neutral-800 rounded-lg shadow-xl border border-neutral-700 max-h-96 overflow-y-auto z-50">
-          <div className="p-4">
-            <div className="flex justify-between items-center mb-3">
-              <h3 className="text-white font-semibold">Select Repository</h3>
-              <button
-                onClick={() => setShowRepos(false)}
-                className="text-neutral-400 hover:text-white"
-              >
-                ×
-              </button>
-            </div>
-            {loading ? (
-              <div className="text-neutral-400">Loading repositories...</div>
-            ) : (
-              <div className="space-y-2">
-                {repos.map(repo => (
-                  <div
-                    key={repo.id}
-                    onClick={() => deployRepo(repo)}
-                    className="p-3 bg-neutral-700 rounded-lg cursor-pointer hover:bg-neutral-600 transition-colors"
-                  >
-                    <h4 className="text-white font-medium">{repo.name}</h4>
-                    <p className="text-neutral-400 text-sm">{repo.description || 'No description'}</p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
+      {selectedRepo && (
+        <DeploymentModal
+          repo={selectedRepo}
+          onClose={() => setSelectedRepo(null)}
+          onDeploy={handleDeploy}
+        />
       )}
-    </div>
+
+      {deployingAgentId && (
+        <DeploymentLogs
+          agentId={deployingAgentId}
+          onClose={() => setDeployingAgentId(null)}
+        />
+      )}
+    </>
   )
 }
