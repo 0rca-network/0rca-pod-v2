@@ -110,28 +110,28 @@ export default function DeployPage() {
         setDeploymentLogs(prev => [...prev, `✓ ${steps[i]}`])
       }
 
-      // Create agent record
-      const agentData = {
-        name: agentName,
-        description,
-        subdomain,
-        repo_owner: selectedRepo.owner.login,
-        repo_name: selectedRepo.name,
-        github_url: selectedRepo.html_url,
-        user_id: user?.id
-      }
+      // Create agent via API
+      const response = await fetch('/api/agents', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          agentData: {
+            name: agentName,
+            description,
+            subdomain,
+            repo_owner: selectedRepo.owner.login,
+            repo_name: selectedRepo.name,
+            github_url: selectedRepo.html_url,
+            user_id: user?.id
+          },
+          deploymentData: {
+            status: 'success'
+          }
+        })
+      })
 
-      const { data: agent, error } = await supabase
-        .from('agents')
-        .insert(agentData)
-        .select()
-        .single()
-
-      if (error) throw error
-
-      await supabase
-        .from('deployments')
-        .insert({ agent_id: agent.id, status: 'success' })
+      const result = await response.json()
+      if (!response.ok) throw new Error(result.error)
 
       setDeploymentLogs(prev => [...prev, '✓ Deployment complete!'])
       setDeploymentStatus('success')
