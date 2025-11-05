@@ -36,7 +36,7 @@ export function GitHubAuth() {
       provider: 'github',
       options: {
         scopes: 'repo read:user',
-        redirectTo: window.location.origin
+        redirectTo: process.env.NEXT_PUBLIC_REDIRECT_URL || 'http://localhost:3000/auth/callback'
       }
     })
     if (error) console.error('Error:', error)
