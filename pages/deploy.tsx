@@ -5,6 +5,10 @@ import { supabase } from '@/lib/supabase'
 import { User } from '@supabase/supabase-js'
 import { DeploymentModal } from '@/components/DeploymentModal'
 import { DeploymentLogs } from '@/components/DeploymentLogs'
+import { WalletProvider, useWallet } from "@txnlab/use-wallet-react";
+import { AlgorandClient } from '@algorandfoundation/algokit-utils'
+import { AgentsContractClient } from '@/contracts/AgentContracts'
+import { AlgoAmount } from '@algorandfoundation/algokit-utils/types/amount'
 
 interface Repository {
   id: number
@@ -20,6 +24,10 @@ interface Repository {
 }
 
 export default function DeployPage() {
+  const { activeAddress, transactionSigner } = useWallet()
+  const algorand = AlgorandClient.testNet()
+  const DEFAULT_APP_ID = 749223216
+  
   const [user, setUser] = useState<User | null>(null)
   const [repos, setRepos] = useState<Repository[]>([])
   const [selectedRepo, setSelectedRepo] = useState<Repository | null>(null)
@@ -105,6 +113,41 @@ export default function DeployPage() {
     setShowDeployForm(true)
   }
 
+  const createAgentOnChain = async () => {
+    if (!activeAddress) {
+      setDeploymentLogs(prev => [...prev, '❌ Wallet not connected'])
+      return
+    }
+
+    try {
+      setDeploymentLogs(prev => [...prev, '🔗 Creating agent on Algorand blockchain...'])
+      
+      const appClient = new AgentsContractClient({
+        appId: DEFAULT_APP_ID,
+        defaultSender: activeAddress,
+        defaultSigner: transactionSigner,
+        algorand,
+      })
+
+      await appClient.send.createAgent({
+        args: {
+          agentName: agentName,
+          agentIpfs: `https://${subdomain}.0rca.live`,
+          pricing: 1000000, // 1 ALGO in microAlgos
+          agentImage: selectedPackage
+        },
+        sender: activeAddress,
+        signer: transactionSigner,
+        staticFee: AlgoAmount.Algo(0.02)
+      })
+
+      setDeploymentLogs(prev => [...prev, '✅ Agent created on blockchain successfully!'])
+    } catch (error) {
+      console.error('Blockchain agent creation error:', error)
+      setDeploymentLogs(prev => [...prev, `❌ Blockchain creation failed: ${error}`])
+    }
+  }
+
   const handleDeploy = async () => {
     if (!agentName || !subdomain || !selectedRepo || !selectedPackage) {
       setError('Agent name, subdomain, and Docker image are required')
@@ -174,6 +217,8 @@ export default function DeployPage() {
             })
 
             if (agentResponse.ok) {
+              // Create agent on Algorand blockchain
+              await createAgentOnChain()
               setDeploymentLogs(prev => [...prev, '✅ Agent deployed successfully!'])
               setDeploymentStatus('success')
             }
@@ -332,6 +377,15 @@ export default function DeployPage() {
                   <div className="text-red-400 text-sm mb-4">{error}</div>
                 )}
                 
+                {!activeAddress && (
+                  <div className="bg-yellow-900 border border-yellow-600 rounded-lg p-4 mb-4">
+                    <div className="text-yellow-400 font-semibold mb-2">⚠️ Wallet Required</div>
+                    <div className="text-yellow-300 text-sm">
+                      Connect your Algorand wallet to create agents on the blockchain
+                    </div>
+                  </div>
+                )}
+                
                 <div className="flex gap-3">
                   <button
                     onClick={() => setShowDeployForm(false)}
@@ -341,7 +395,7 @@ export default function DeployPage() {
                   </button>
                   <button
                     onClick={handleDeploy}
-                    disabled={deploymentStatus === 'deploying'}
+                    disabled={deploymentStatus === 'deploying' || !activeAddress}
                     className="flex-1 bg-[#63f2d2] text-black py-3 rounded-lg font-semibold hover:opacity-90 transition-opacity disabled:opacity-50"
                   >
                     {deploymentStatus === 'deploying' ? 'Deploying...' : 'Deploy Agent'}
