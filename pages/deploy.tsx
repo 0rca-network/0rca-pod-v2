@@ -28,6 +28,7 @@ export default function DeployPage() {
   const algorand = AlgorandClient.testNet()
   const DEFAULT_APP_ID = 749223216
   
+  const [mounted, setMounted] = useState(false)
   const [user, setUser] = useState<User | null>(null)
   const [repos, setRepos] = useState<Repository[]>([])
   const [selectedRepo, setSelectedRepo] = useState<Repository | null>(null)
@@ -46,6 +47,7 @@ export default function DeployPage() {
   const [reposFetched, setReposFetched] = useState(false)
 
   useEffect(() => {
+    setMounted(true)
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null)
       if (session?.user && !reposFetched) {
@@ -114,7 +116,7 @@ export default function DeployPage() {
   }
 
   const createAgentOnChain = async () => {
-    if (!activeAddress) {
+    if (!mounted || !activeAddress) {
       setDeploymentLogs(prev => [...prev, '❌ Wallet not connected'])
       return
     }
@@ -377,7 +379,7 @@ export default function DeployPage() {
                   <div className="text-red-400 text-sm mb-4">{error}</div>
                 )}
                 
-                {!activeAddress && (
+                {mounted && !activeAddress && (
                   <div className="bg-yellow-900 border border-yellow-600 rounded-lg p-4 mb-4">
                     <div className="text-yellow-400 font-semibold mb-2">⚠️ Wallet Required</div>
                     <div className="text-yellow-300 text-sm">
@@ -395,7 +397,7 @@ export default function DeployPage() {
                   </button>
                   <button
                     onClick={handleDeploy}
-                    disabled={deploymentStatus === 'deploying' || !activeAddress}
+                    disabled={deploymentStatus === 'deploying' || (!mounted || !activeAddress)}
                     className="flex-1 bg-[#63f2d2] text-black py-3 rounded-lg font-semibold hover:opacity-90 transition-opacity disabled:opacity-50"
                   >
                     {deploymentStatus === 'deploying' ? 'Deploying...' : 'Deploy Agent'}
