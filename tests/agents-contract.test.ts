@@ -72,7 +72,7 @@ describe('AgentsContract Deployment', () => {
     await algorand.send.payment({
       sender: deployer.addr,
       receiver: appClient.appAddress,
-      amount: AlgoAmount.Algo(0.3),
+      amount: AlgoAmount.Algo(0.9),
       signer: signer
     })
     // Create an agent
