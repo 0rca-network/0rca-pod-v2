@@ -136,7 +136,7 @@ export default function DeployPage() {
         args: {
           agentName: agentName,
           agentIpfs: `https://${subdomain}.0rca.live`,
-          pricing: 1000000, // 1 ALGO in microAlgos
+          pricing: 1, // 1 ALGO in microAlgos
           agentImage: selectedPackage
         },
         sender: activeAddress,
