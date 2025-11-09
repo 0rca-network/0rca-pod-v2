@@ -38,6 +38,8 @@ export default function DeployPage() {
   const [agentName, setAgentName] = useState('')
   const [description, setDescription] = useState('')
   const [subdomain, setSubdomain] = useState('')
+  const [category, setCategory] = useState('General')
+  const [tags, setTags] = useState('')
   const [deploymentStatus, setDeploymentStatus] = useState<'idle' | 'deploying' | 'success' | 'error'>('idle')
   const [deploymentLogs, setDeploymentLogs] = useState<string[]>([])
   const [error, setError] = useState('')
@@ -224,7 +226,9 @@ export default function DeployPage() {
                   app_id: Number(AgentContractID),
                   price_microalgo: 1000000,
                   status: 'active',
-                  runtime_status: 'active'
+                  runtime_status: 'active',
+                  category: category,
+                  tags: tags.split(',').map(tag => tag.trim()).filter(tag => tag)
                 },
                 deploymentData: {
                   status: 'success',
@@ -362,6 +366,37 @@ export default function DeployPage() {
                       />
                       <span className="bg-neutral-600 text-neutral-300 px-4 py-3 rounded-r-lg">.0rca.live</span>
                     </div>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                  <div>
+                    <label className="block text-neutral-300 text-sm mb-2">Category *</label>
+                    <select
+                      value={category}
+                      onChange={(e) => setCategory(e.target.value)}
+                      className="w-full bg-neutral-700 text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#63f2d2]"
+                    >
+                      <option value="General">General</option>
+                      <option value="Data Analysis">Data Analysis</option>
+                      <option value="Content Creation">Content Creation</option>
+                      <option value="Automation">Automation</option>
+                      <option value="Research">Research</option>
+                      <option value="Trading">Trading</option>
+                      <option value="Gaming">Gaming</option>
+                      <option value="Education">Education</option>
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-neutral-300 text-sm mb-2">Tags</label>
+                    <input
+                      type="text"
+                      value={tags}
+                      onChange={(e) => setTags(e.target.value)}
+                      className="w-full bg-neutral-700 text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#63f2d2]"
+                      placeholder="ai, automation, data (comma separated)"
+                    />
                   </div>
                 </div>
                 

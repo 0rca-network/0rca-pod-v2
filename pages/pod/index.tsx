@@ -1,38 +1,41 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import { AgentCard } from '@/components/AgentCard';
-import { agents } from '@/lib/dummy-data';
 
 export default function PodMarketplace() {
   const router = useRouter();
   const { category, filter } = router.query;
   const [sortBy, setSortBy] = useState('popular');
+  const [agents, setAgents] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchAgents = async () => {
+      try {
+        const response = await fetch('/api/list-agents');
+        const data = await response.json();
+        setAgents(data.agents || []);
+      } catch (error) {
+        console.error('Error fetching agents:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchAgents();
+  }, []);
 
   let filteredAgents = [...agents];
-
-  if (category) {
-    const categoryName = String(category).split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-    filteredAgents = filteredAgents.filter(agent => agent.category === categoryName);
-  }
-
-  if (filter === 'featured') {
-    filteredAgents = filteredAgents.filter(agent => agent.executedJobs > 2000);
-  } else if (filter === 'newest') {
-    filteredAgents = filteredAgents.sort((a, b) => parseInt(b.id) - parseInt(a.id)).slice(0, 4);
-  } else if (filter === 'top-rated') {
-    filteredAgents = filteredAgents.sort((a, b) => b.executedJobs - a.executedJobs).slice(0, 4);
-  }
 
   const sortedAgents = [...filteredAgents].sort((a, b) => {
     switch (sortBy) {
       case 'popular':
-        return b.executedJobs - a.executedJobs;
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       case 'newest':
-        return parseInt(b.id) - parseInt(a.id);
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
       case 'price-low':
-        return parseInt(a.credits) - parseInt(b.credits);
+        return (a.price_microalgo || 0) - (b.price_microalgo || 0);
       case 'price-high':
-        return parseInt(b.credits) - parseInt(a.credits);
+        return (b.price_microalgo || 0) - (a.price_microalgo || 0);
       default:
         return 0;
     }
@@ -63,19 +66,23 @@ export default function PodMarketplace() {
         </select>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-        {sortedAgents.map((agent) => (
-          <AgentCard
-            key={agent.id}
-            id={agent.id}
-            name={agent.name}
-            developer={agent.developer}
-            credits={agent.credits}
-            tags={agent.tags}
-            category={agent.category}
-          />
-        ))}
-      </div>
+      {loading ? (
+        <div className="text-center text-neutral-400">Loading agents...</div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+          {sortedAgents.map((agent) => (
+            <AgentCard
+              key={agent.id}
+              id={agent.id}
+              name={agent.name}
+              developer={agent.repo_owner}
+              credits={Math.floor((agent.price_microalgo || 0) / 1000000).toString()}
+              tags={agent.tags || [agent.subdomain]}
+              category={agent.category || 'General'}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
