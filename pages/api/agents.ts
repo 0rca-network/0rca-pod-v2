@@ -26,8 +26,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     )
 
-    // Remove user_id from agentData as it will be set by RLS
-    const { user_id, ...cleanAgentData } = agentData
+    // Get user from session
+    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    if (userError || !user) {
+      return res.status(401).json({ error: 'User not authenticated' })
+    }
+
+    // Add user_id to agentData
+    const cleanAgentData = { ...agentData, user_id: user.id }
 
     // Check if agent already exists for this repo
     const { data: existingAgent } = await supabase

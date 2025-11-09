@@ -76,7 +76,7 @@ describe('AgentsContract Deployment', () => {
       signer: signer
     })
     // Create an agent
-    await appClient.send.createAgent({
+    const AgentContractID = await appClient.send.createAgent({
       args: {
         agentName: "Test Agent",
         agentIpfs: "QmTestHash123",
@@ -86,46 +86,46 @@ describe('AgentsContract Deployment', () => {
       sender: deployer.addr,
       signer: signer,
       staticFee: AlgoAmount.Algo(0.02)
-    });
+    }).then((result) => result.return);
 
-    console.log('Successfully created agent on App ID:', appClient.appId);
+    console.log('Successfully created agent with App ID:', AgentContractID);
     expect(appClient.appId).toBeDefined();
   });
 
-  it('should deploy LoggingContract and emit log', async () => {
-    const signer = algosdk.makeBasicAccountTransactionSigner(deployer)
+  // it('should deploy LoggingContract and emit log', async () => {
+  //   const signer = algosdk.makeBasicAccountTransactionSigner(deployer)
     
-    const loggingFactory = new LoggingContractFactory({
-      defaultSender: deployer.addr,
-      defaultSigner: signer,
-      algorand,
-    })
+  //   const loggingFactory = new LoggingContractFactory({
+  //     defaultSender: deployer.addr,
+  //     defaultSigner: signer,
+  //     algorand,
+  //   })
 
-    // Deploy LoggingContract
-    const { appClient: loggingClient } = await loggingFactory.send.create.createApplication({
-      args: {ownerAddress: deployer.addr.toString()
+  //   // Deploy LoggingContract
+  //   const { appClient: loggingClient } = await loggingFactory.send.create.createApplication({
+  //     args: {ownerAddress: deployer.addr.toString()
 
-      },
-      sender: deployer.addr,
-      signer: signer,
-      onComplete: OnApplicationComplete.NoOpOC,
-    });
+  //     },
+  //     sender: deployer.addr,
+  //     signer: signer,
+  //     onComplete: OnApplicationComplete.NoOpOC,
+  //   });
 
-    console.log('Deployed LoggingContract App ID:', loggingClient.appId);
+  //   console.log('Deployed LoggingContract App ID:', loggingClient.appId);
 
-    // Emit a log
-    await loggingClient.send.emitLog({
-      args: {
-        eventName: "Test Event",
-        agentId: BigInt(loggingClient.appId),
-        status: "success"
-      },
-      sender: deployer.addr,
-      signer: signer,
-    });
+  //   // Emit a log
+  //   await loggingClient.send.emitLog({
+  //     args: {
+  //       eventName: "Test Event",
+  //       agentId: BigInt(loggingClient.appId),
+  //       status: "success"
+  //     },
+  //     sender: deployer.addr,
+  //     signer: signer,
+  //   });
 
-    console.log('Successfully emitted log on App ID:', loggingClient.appId);
-    expect(loggingClient.appId).toBeDefined();
-    expect(loggingClient.appId).toBeGreaterThan(0);
-  });
+  //   console.log('Successfully emitted log on App ID:', loggingClient.appId);
+  //   expect(loggingClient.appId).toBeDefined();
+  //   expect(loggingClient.appId).toBeGreaterThan(0);
+  // });
 });

@@ -9,6 +9,7 @@ import { WalletProvider, useWallet } from "@txnlab/use-wallet-react";
 import { AlgorandClient } from '@algorandfoundation/algokit-utils'
 import { AgentsContractClient } from '@/contracts/AgentContracts'
 import { AlgoAmount } from '@algorandfoundation/algokit-utils/types/amount'
+import { getApplicationAddress } from 'algosdk'
 
 interface Repository {
   id: number
@@ -26,7 +27,7 @@ interface Repository {
 export default function DeployPage() {
   const { activeAddress, transactionSigner } = useWallet()
   const algorand = AlgorandClient.testNet()
-  const DEFAULT_APP_ID = 749223216
+  const DEFAULT_APP_ID = 749370728
   
   const [mounted, setMounted] = useState(false)
   const [user, setUser] = useState<User | null>(null)
@@ -131,7 +132,7 @@ export default function DeployPage() {
         algorand,
       })
 
-      await appClient.send.createAgent({
+      const result = await appClient.send.createAgent({
         args: {
           agentName: agentName,
           agentIpfs: `https://${subdomain}.0rca.live`,
@@ -143,7 +144,11 @@ export default function DeployPage() {
         staticFee: AlgoAmount.Algo(0.02)
       })
 
+      const AgentContractID = result.return
+      const agentAddress = getApplicationAddress(Number(AgentContractID))
+      
       setDeploymentLogs(prev => [...prev, '✅ Agent created on blockchain successfully!'])
+      return { AgentContractID, agentAddress }
     } catch (error) {
       console.error('Blockchain agent creation error:', error)
       setDeploymentLogs(prev => [...prev, `❌ Blockchain creation failed: ${error}`])
@@ -163,7 +168,7 @@ export default function DeployPage() {
 
     try {
       // Create agent on blockchain first - only proceed if successful
-      await createAgentOnChain()
+      const { AgentContractID, agentAddress } = await createAgentOnChain()
       const deployPayload = {
         image_name: selectedPackage,
         app_name: subdomain,
@@ -213,8 +218,8 @@ export default function DeployPage() {
                   repo_owner: selectedRepo.owner.login,
                   repo_name: selectedRepo.name,
                   github_url: selectedRepo.html_url,
-                  agent_address: activeAddress,
-                  app_id: DEFAULT_APP_ID,
+                  agent_address: agentAddress,
+                  app_id: Number(AgentContractID),
                   price_microalgo: 1000000,
                   status: 'active',
                   runtime_status: 'active'
