@@ -31,7 +31,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen }) => {
   const isActive = (href: string) => router.pathname === href || router.asPath === href;
 
   return (
-    <aside className={`glass-effect w-64 flex-shrink-0 flex flex-col fixed left-0 top-0 bottom-0 z-30 transition-all duration-500 ease-in-out ${
+    <aside className={`glass-effect w-64 flex-shrink-0 flex flex-col fixed left-0 top-0 bottom-0 z-30 transition-all duration-500 ease-in-out border-r border-white/10 ${
       isOpen ? 'translate-x-0' : '-translate-x-full'
     }`}>
       <div className="h-20 flex items-center justify-center border-b border-white/10">

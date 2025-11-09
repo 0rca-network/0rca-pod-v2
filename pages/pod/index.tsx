@@ -72,6 +72,7 @@ export default function PodMarketplace() {
             developer={agent.developer}
             credits={agent.credits}
             tags={agent.tags}
+            category={agent.category}
           />
         ))}
       </div>

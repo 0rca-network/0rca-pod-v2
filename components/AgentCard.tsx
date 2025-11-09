@@ -1,6 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
-import { GenerativeThumbnail } from './GenerativeThumbnail';
+import { AgentThumbnail } from './AgentThumbnail';
 
 interface AgentCardProps {
   id: string;
@@ -8,14 +8,15 @@ interface AgentCardProps {
   developer: string;
   credits: string;
   tags: string[];
+  category?: string;
 }
 
-export const AgentCard: React.FC<AgentCardProps> = ({ id, name, developer, credits, tags }) => {
+export const AgentCard: React.FC<AgentCardProps> = ({ id, name, developer, credits, tags, category = 'Default' }) => {
   return (
     <Link href={`/pod/agents/${id}`}>
       <div className="bg-neutral-800 rounded-2xl overflow-hidden hover:ring-2 hover:ring-[#63f2d2] transition-all cursor-pointer group">
         <div className="aspect-[4/3]">
-          <GenerativeThumbnail agentName={name} className="w-full h-full object-cover" />
+          <AgentThumbnail name={name} category={category} className="w-full h-full" />
         </div>
         <div className="p-4 space-y-2">
           <h3 className="text-white font-semibold text-lg group-hover:text-mint-glow transition-colors">{name}</h3>
