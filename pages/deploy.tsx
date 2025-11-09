@@ -118,7 +118,7 @@ export default function DeployPage() {
   const createAgentOnChain = async () => {
     if (!mounted || !activeAddress) {
       setDeploymentLogs(prev => [...prev, '❌ Wallet not connected'])
-      return
+      throw new Error('Wallet not connected')
     }
 
     try {
@@ -147,6 +147,7 @@ export default function DeployPage() {
     } catch (error) {
       console.error('Blockchain agent creation error:', error)
       setDeploymentLogs(prev => [...prev, `❌ Blockchain creation failed: ${error}`])
+      throw error
     }
   }
 
@@ -160,10 +161,9 @@ export default function DeployPage() {
     setError('')
     setDeploymentLogs(['🚀 Starting deployment...'])
 
-    // Create agent on blockchain first
-    await createAgentOnChain()
-
     try {
+      // Create agent on blockchain first - only proceed if successful
+      await createAgentOnChain()
       const deployPayload = {
         image_name: selectedPackage,
         app_name: subdomain,
