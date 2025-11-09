@@ -145,7 +145,7 @@ export default function DeployPage() {
       })
 
       const AgentContractID = result.return
-      const agentAddress = getApplicationAddress(Number(AgentContractID))
+      const agentAddress = getApplicationAddress(Number(AgentContractID)).toString()
       
       setDeploymentLogs(prev => [...prev, '✅ Agent created on blockchain successfully!'])
       return { AgentContractID, agentAddress }
@@ -204,11 +204,13 @@ export default function DeployPage() {
           if (status.status === 'completed') {
             // Create agent record
             const { data: { session } } = await supabase.auth.getSession()
+            console.log('Session user:', session?.user?.id)
             const agentResponse = await fetch('/api/agents', {
               method: 'POST',
               headers: { 
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${session?.access_token}`
+                'Authorization': `Bearer ${session?.access_token}`,
+                'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
               },
               body: JSON.stringify({
                 agentData: {

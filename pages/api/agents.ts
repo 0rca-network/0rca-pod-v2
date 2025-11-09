@@ -16,22 +16,24 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
       {
-        global: {
-          headers: {
-            Authorization: authHeader
-          }
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false
         }
       }
     )
 
-    // Get user from session
-    const { data: { user }, error: userError } = await supabase.auth.getUser()
+    // Verify JWT token and get user
+    const token = authHeader.replace('Bearer ', '')
+    const { data: { user }, error: userError } = await supabase.auth.getUser(token)
     if (userError || !user) {
+      console.error('Auth error:', userError)
       return res.status(401).json({ error: 'User not authenticated' })
     }
 
+    console.log('Authenticated user:', user.id)
     // Add user_id to agentData
     const cleanAgentData = { ...agentData, user_id: user.id }
 
