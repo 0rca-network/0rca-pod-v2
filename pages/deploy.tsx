@@ -125,7 +125,7 @@ export default function DeployPage() {
       setDeploymentLogs(prev => [...prev, '🔗 Creating agent on Algorand blockchain...'])
       
       const appClient = new AgentsContractClient({
-        appId: DEFAULT_APP_ID,
+        appId: BigInt(DEFAULT_APP_ID),
         defaultSender: activeAddress,
         defaultSigner: transactionSigner,
         algorand,
@@ -159,6 +159,9 @@ export default function DeployPage() {
     setDeploymentStatus('deploying')
     setError('')
     setDeploymentLogs(['🚀 Starting deployment...'])
+
+    // Create agent on blockchain first
+    await createAgentOnChain()
 
     try {
       const deployPayload = {
@@ -219,8 +222,6 @@ export default function DeployPage() {
             })
 
             if (agentResponse.ok) {
-              // Create agent on Algorand blockchain
-              await createAgentOnChain()
               setDeploymentLogs(prev => [...prev, '✅ Agent deployed successfully!'])
               setDeploymentStatus('success')
             }
