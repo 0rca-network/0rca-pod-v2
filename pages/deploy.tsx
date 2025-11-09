@@ -208,11 +208,16 @@ export default function DeployPage() {
               body: JSON.stringify({
                 agentData: {
                   name: agentName,
-                  description,
+                  description: description || 'No description provided',
                   subdomain,
                   repo_owner: selectedRepo.owner.login,
                   repo_name: selectedRepo.name,
-                  github_url: selectedRepo.html_url
+                  github_url: selectedRepo.html_url,
+                  agent_address: activeAddress,
+                  app_id: DEFAULT_APP_ID,
+                  price_microalgo: 1000000,
+                  status: 'active',
+                  runtime_status: 'active'
                 },
                 deploymentData: {
                   status: 'success',
