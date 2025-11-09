@@ -19,9 +19,7 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>
-          <Link href="https://0rca.network" target="_blank">
-            <Image src="/0rca-Photoroom.svg" alt="0rca" width={120} height={48} className="h-12 w-auto" />
-          </Link>
+          
         </div>
         <div className="flex-1 max-w-xl">
           <input

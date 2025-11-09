@@ -1,11 +1,29 @@
 import React, { useState } from 'react';
+import { useRouter } from 'next/router';
 import { AgentCard } from '@/components/AgentCard';
 import { agents } from '@/lib/dummy-data';
 
 export default function PodMarketplace() {
+  const router = useRouter();
+  const { category, filter } = router.query;
   const [sortBy, setSortBy] = useState('popular');
 
-  const sortedAgents = [...agents].sort((a, b) => {
+  let filteredAgents = [...agents];
+
+  if (category) {
+    const categoryName = String(category).split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+    filteredAgents = filteredAgents.filter(agent => agent.category === categoryName);
+  }
+
+  if (filter === 'featured') {
+    filteredAgents = filteredAgents.filter(agent => agent.executedJobs > 2000);
+  } else if (filter === 'newest') {
+    filteredAgents = filteredAgents.sort((a, b) => parseInt(b.id) - parseInt(a.id)).slice(0, 4);
+  } else if (filter === 'top-rated') {
+    filteredAgents = filteredAgents.sort((a, b) => b.executedJobs - a.executedJobs).slice(0, 4);
+  }
+
+  const sortedAgents = [...filteredAgents].sort((a, b) => {
     switch (sortBy) {
       case 'popular':
         return b.executedJobs - a.executedJobs;
@@ -23,8 +41,12 @@ export default function PodMarketplace() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-4xl font-bold text-white mb-2">Orca Pod</h1>
-        <p className="text-neutral-400">Discover and hire AI agents for your tasks</p>
+        <h1 className="text-4xl font-bold text-white mb-2">
+          {category ? String(category).split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') : 'Orca Pod'}
+        </h1>
+        <p className="text-neutral-400">
+          {category ? `Browse ${String(category).split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')} agents` : 'Discover and hire AI agents for your tasks'}
+        </p>
       </div>
 
       <div className="flex items-center gap-4">

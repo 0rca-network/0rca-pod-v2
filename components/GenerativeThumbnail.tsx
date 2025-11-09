@@ -5,7 +5,7 @@ interface GenerativeThumbnailProps {
   className?: string;
 }
 
-export const GenerativeThumbnail: React.FC<GenerativeThumbnailProps> = ({ agentName, className = '' }) => {
+export const GenerativeThumbnail: React.FC<GenerativeThumbnailProps> = ({ agentName = 'default', className = '' }) => {
   const colorPalettes = [
     ['#4ECDC4', '#44A08D', '#096A5A', '#E8F8F5'], // Teal family
     ['#667eea', '#764ba2', '#4B0082', '#E6E6FA'], // Purple family  
@@ -17,16 +17,22 @@ export const GenerativeThumbnail: React.FC<GenerativeThumbnailProps> = ({ agentN
     ['#ff9a9e', '#fecfef', '#FF69B4', '#FFF0F5']  // Rose family
   ];
 
-  const randomId = Math.random().toString(36).substr(2, 9);
-  const palette = colorPalettes[Math.floor(Math.random() * colorPalettes.length)];
+  const seededRandom = (seed: string, index: number) => {
+    const hash = seed.split('').reduce((acc, char) => acc + char.charCodeAt(0), index * 1000);
+    return (hash % 1000) / 1000;
+  };
+
+  const randomId = agentName.replace(/\s/g, '-').toLowerCase();
+  const paletteIndex = Math.floor(seededRandom(agentName, 0) * colorPalettes.length);
+  const palette = colorPalettes[paletteIndex];
   const [color1, color2, color3, diffusion] = palette;
 
-  const blobs = Array.from({ length: 6 }, () => ({
-    cx: Math.random() * 120 - 10,
-    cy: Math.random() * 120 - 10,
-    r: 30 + Math.random() * 50,
-    opacity: 0.3 + Math.random() * 0.4,
-    color: [color1, color2, color3][Math.floor(Math.random() * 3)],
+  const blobs = Array.from({ length: 6 }, (_, i) => ({
+    cx: seededRandom(agentName, i * 4) * 120 - 10,
+    cy: seededRandom(agentName, i * 4 + 1) * 120 - 10,
+    r: 30 + seededRandom(agentName, i * 4 + 2) * 50,
+    opacity: 0.3 + seededRandom(agentName, i * 4 + 3) * 0.4,
+    color: [color1, color2, color3][Math.floor(seededRandom(agentName, i * 4 + 4) * 3)],
   }));
 
   return (
@@ -47,7 +53,7 @@ export const GenerativeThumbnail: React.FC<GenerativeThumbnailProps> = ({ agentN
       
       {blobs.map((blob, i) => (
         <circle
-          key={i}
+          key={`${randomId}-${i}`}
           cx={blob.cx}
           cy={blob.cy}
           r={blob.r}
