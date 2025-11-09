@@ -21,6 +21,9 @@ export function DeploymentModal({ repo, onClose, onDeploy }: DeploymentModalProp
   const [agentName, setAgentName] = useState('')
   const [description, setDescription] = useState('')
   const [subdomain, setSubdomain] = useState('')
+  const [dataInput, setDataInput] = useState('')
+  const [exampleInput, setExampleInput] = useState('')
+  const [exampleOutput, setExampleOutput] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -67,7 +70,10 @@ export function DeploymentModal({ repo, onClose, onDeploy }: DeploymentModalProp
         subdomain,
         repo_owner: repo.owner.login,
         repo_name: repo.name,
-        github_url: `https://github.com/${repo.owner.login}/${repo.name}`
+        github_url: `https://github.com/${repo.owner.login}/${repo.name}`,
+        data_input: dataInput,
+        example_input: exampleInput,
+        example_output: exampleOutput
       }
 
       onDeploy(agentData)
@@ -126,6 +132,39 @@ export function DeploymentModal({ repo, onClose, onDeploy }: DeploymentModalProp
               />
               <span className="bg-neutral-600 text-neutral-300 px-3 py-2 rounded-r">.0rca.live</span>
             </div>
+          </div>
+
+          <div>
+            <label className="block text-neutral-300 text-sm mb-1">Data Input Format</label>
+            <textarea
+              value={dataInput}
+              onChange={(e) => setDataInput(e.target.value)}
+              className="w-full bg-neutral-700 text-white rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              rows={2}
+              placeholder="Describe the expected input format..."
+            />
+          </div>
+
+          <div>
+            <label className="block text-neutral-300 text-sm mb-1">Example Input</label>
+            <textarea
+              value={exampleInput}
+              onChange={(e) => setExampleInput(e.target.value)}
+              className="w-full bg-neutral-700 text-white rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              rows={3}
+              placeholder='{"text": "Hello world", "language": "en"}'
+            />
+          </div>
+
+          <div>
+            <label className="block text-neutral-300 text-sm mb-1">Example Output</label>
+            <textarea
+              value={exampleOutput}
+              onChange={(e) => setExampleOutput(e.target.value)}
+              className="w-full bg-neutral-700 text-white rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              rows={3}
+              placeholder='{"result": "Processed text", "confidence": 0.95}'
+            />
           </div>
 
           {error && (

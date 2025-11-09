@@ -40,6 +40,9 @@ export default function DeployPage() {
   const [subdomain, setSubdomain] = useState('')
   const [category, setCategory] = useState('General')
   const [tags, setTags] = useState('')
+  const [dataInput, setDataInput] = useState('')
+  const [exampleInput, setExampleInput] = useState('')
+  const [exampleOutput, setExampleOutput] = useState('')
   const [deploymentStatus, setDeploymentStatus] = useState<'idle' | 'deploying' | 'success' | 'error'>('idle')
   const [deploymentLogs, setDeploymentLogs] = useState<string[]>([])
   const [error, setError] = useState('')
@@ -228,7 +231,10 @@ export default function DeployPage() {
                   status: 'active',
                   runtime_status: 'active',
                   category: category,
-                  tags: tags.split(',').map(tag => tag.trim()).filter(tag => tag)
+                  tags: tags.split(',').map(tag => tag.trim()).filter(tag => tag),
+                  data_input: dataInput,
+                  example_input: exampleInput,
+                  example_output: exampleOutput
                 },
                 deploymentData: {
                   status: 'success',
@@ -409,6 +415,41 @@ export default function DeployPage() {
                     rows={3}
                     placeholder="Describe your agent..."
                   />
+                </div>
+
+                <div className="mb-6">
+                  <label className="block text-neutral-300 text-sm mb-2">Data Input Format</label>
+                  <textarea
+                    value={dataInput}
+                    onChange={(e) => setDataInput(e.target.value)}
+                    className="w-full bg-neutral-700 text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#63f2d2]"
+                    rows={2}
+                    placeholder="Describe the expected input format (e.g., JSON with text field, image URL, etc.)"
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                  <div>
+                    <label className="block text-neutral-300 text-sm mb-2">Example Input</label>
+                    <textarea
+                      value={exampleInput}
+                      onChange={(e) => setExampleInput(e.target.value)}
+                      className="w-full bg-neutral-700 text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#63f2d2]"
+                      rows={4}
+                      placeholder='{"text": "Hello world", "language": "en"}'
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="block text-neutral-300 text-sm mb-2">Example Output</label>
+                    <textarea
+                      value={exampleOutput}
+                      onChange={(e) => setExampleOutput(e.target.value)}
+                      className="w-full bg-neutral-700 text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#63f2d2]"
+                      rows={4}
+                      placeholder='{"result": "Processed text", "confidence": 0.95}'
+                    />
+                  </div>
                 </div>
 
                 <div className="mb-6">

@@ -60,8 +60,10 @@ export default function AgentDetail() {
               <p className="text-white text-lg">{agent.repo_name}</p>
             </div>
             <div>
-              <p className="text-neutral-400 text-sm">Subdomain</p>
-              <p className="text-mint-glow text-lg">{agent.subdomain}</p>
+              <p className="text-neutral-400 text-sm">Live URL</p>
+              <a href={`https://${agent.subdomain}.0rca.live/`} target="_blank" rel="noopener noreferrer" className="text-mint-glow text-lg hover:underline">
+                https://{agent.subdomain}.0rca.live/
+              </a>
             </div>
           </div>
           <div className="flex gap-4">
@@ -101,6 +103,24 @@ export default function AgentDetail() {
           <h3 className="text-xl font-semibold text-white mb-2">Created</h3>
           <p className="text-neutral-400">{new Date(agent.created_at).toLocaleDateString()}</p>
         </div>
+        {agent.data_input && (
+          <div>
+            <h3 className="text-xl font-semibold text-white mb-2">Input Format</h3>
+            <p className="text-neutral-400">{agent.data_input}</p>
+          </div>
+        )}
+        {agent.example_input && (
+          <div>
+            <h3 className="text-xl font-semibold text-white mb-2">Example Input</h3>
+            <pre className="text-neutral-400 bg-neutral-800 p-3 rounded text-sm overflow-x-auto">{agent.example_input}</pre>
+          </div>
+        )}
+        {agent.example_output && (
+          <div>
+            <h3 className="text-xl font-semibold text-white mb-2">Example Output</h3>
+            <pre className="text-neutral-400 bg-neutral-800 p-3 rounded text-sm overflow-x-auto">{agent.example_output}</pre>
+          </div>
+        )}
       </div>
 
       {showModal && (
