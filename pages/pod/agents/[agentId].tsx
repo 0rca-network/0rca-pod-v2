@@ -33,6 +33,12 @@ export default function AgentDetail() {
     router.push(`/pod/agents/${agentId}/jobs/job-1`);
   };
 
+  const handleHire = () => {
+    if (!activeAccount) return;
+    // Navigate to agent URL
+    window.open(`https://${agent.subdomain}.0rca.live/`, '_blank');
+  };
+
   return (
     <div className="space-y-8">
       <Link href="/pod" className="inline-flex items-center gap-2 text-neutral-400 hover:text-white transition-colors text-sm">
@@ -74,6 +80,7 @@ export default function AgentDetail() {
               Free Demo
             </button>
             <button 
+              onClick={handleHire}
               className={`px-6 py-3 rounded-lg font-semibold transition-all ${
                 activeAccount 
                   ? 'bg-mint-glow text-black hover:opacity-90' 
@@ -126,6 +133,9 @@ export default function AgentDetail() {
       {showModal && (
         <DemoInputModal
           agentName={agent.name}
+          dataInput={agent.data_input}
+          exampleInput={agent.example_input}
+          exampleOutput={agent.example_output}
           onClose={() => setShowModal(false)}
           onSubmit={handleDemo}
         />
