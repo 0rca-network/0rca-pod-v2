@@ -23,7 +23,7 @@ import { TransactionComposer, AppCallMethodCall, AppMethodCallTransactionArgumen
 import { SendParams, SendSingleTransactionResult, SendAtomicTransactionComposerResults } from '@algorandfoundation/algokit-utils/types/transaction'
 import { Address, encodeAddress, modelsv2, OnApplicationComplete, Transaction, TransactionSigner } from 'algosdk'
 
-export const APP_SPEC: Arc56Contract = {"name":"LoggingContract","structs":{},"methods":[{"name":"createApplication","args":[{"type":"account","name":"ownerAddress"}],"returns":{"type":"void"},"actions":{"create":["NoOp"],"call":[]},"readonly":false,"events":[],"recommendations":{}},{"name":"emit_log","args":[{"type":"string","name":"eventName"},{"type":"application","name":"agentID"},{"type":"string","name":"status"}],"returns":{"type":"void"},"actions":{"create":[],"call":["NoOp"]},"readonly":false,"events":[],"recommendations":{}}],"arcs":[22,28],"networks":{},"state":{"schema":{"global":{"ints":0,"bytes":1},"local":{"ints":0,"bytes":0}},"keys":{"global":{"MANAGER_ADDRESS":{"keyType":"AVMString","valueType":"address","key":"TUFOQUdFUl9BRERSRVNT"}},"local":{},"box":{}},"maps":{"global":{},"local":{},"box":{}}},"bareActions":{"create":[],"call":[]},"sourceInfo":{"approval":{"sourceInfo":[{"pc":[33,64],"errorMessage":"OnCompletion is not NoOp"},{"pc":[68],"errorMessage":"can only call when creating"},{"pc":[36],"errorMessage":"can only call when not creating"}],"pcOffsetMethod":"none"},"clear":{"sourceInfo":[],"pcOffsetMethod":"none"}},"source":{"approval":"I3ByYWdtYSB2ZXJzaW9uIDEwCiNwcmFnbWEgdHlwZXRyYWNrIGZhbHNlCgovLyBAYWxnb3JhbmRmb3VuZGF0aW9uL2FsZ29yYW5kLXR5cGVzY3JpcHQvYXJjNC9pbmRleC5kLnRzOjpDb250cmFjdC5hcHByb3ZhbFByb2dyYW0oKSAtPiB1aW50NjQ6Cm1haW46CiAgICAvLyBzbWFydF9jb250cmFjdHMvTG9nZ2luZy5hbGdvLnRzOjI4CiAgICAvLyBleHBvcnQgY2xhc3MgTG9nZ2luZ0NvbnRyYWN0IGV4dGVuZHMgQ29udHJhY3QgewogICAgdHhuIE51bUFwcEFyZ3MKICAgIGJ6IG1haW5fYWZ0ZXJfaWZfZWxzZUA4CiAgICBwdXNoYnl0ZXNzIDB4ZGE1M2ZlZmUgMHhiZTZiZmI4OSAvLyBtZXRob2QgImNyZWF0ZUFwcGxpY2F0aW9uKGFjY291bnQpdm9pZCIsIG1ldGhvZCAiZW1pdF9sb2coc3RyaW5nLGFwcGxpY2F0aW9uLHN0cmluZyl2b2lkIgogICAgdHhuYSBBcHBsaWNhdGlvbkFyZ3MgMAogICAgbWF0Y2ggbWFpbl9jcmVhdGVBcHBsaWNhdGlvbl9yb3V0ZUAzIG1haW5fZW1pdF9sb2dfcm91dGVANAoKbWFpbl9hZnRlcl9pZl9lbHNlQDg6CiAgICAvLyBzbWFydF9jb250cmFjdHMvTG9nZ2luZy5hbGdvLnRzOjI4CiAgICAvLyBleHBvcnQgY2xhc3MgTG9nZ2luZ0NvbnRyYWN0IGV4dGVuZHMgQ29udHJhY3QgewogICAgcHVzaGludCAwIC8vIDAKICAgIHJldHVybgoKbWFpbl9lbWl0X2xvZ19yb3V0ZUA0OgogICAgLy8gc21hcnRfY29udHJhY3RzL0xvZ2dpbmcuYWxnby50czo0NQogICAgLy8gZW1pdF9sb2coZXZlbnROYW1lOiBzdHJpbmcsIGFnZW50SUQ6IEFwcGxpY2F0aW9uLCBzdGF0dXM6IHN0cmluZyk6IHZvaWQgewogICAgdHhuIE9uQ29tcGxldGlvbgogICAgIQogICAgYXNzZXJ0IC8vIE9uQ29tcGxldGlvbiBpcyBub3QgTm9PcAogICAgdHhuIEFwcGxpY2F0aW9uSUQKICAgIGFzc2VydCAvLyBjYW4gb25seSBjYWxsIHdoZW4gbm90IGNyZWF0aW5nCiAgICAvLyBzbWFydF9jb250cmFjdHMvTG9nZ2luZy5hbGdvLnRzOjI4CiAgICAvLyBleHBvcnQgY2xhc3MgTG9nZ2luZ0NvbnRyYWN0IGV4dGVuZHMgQ29udHJhY3QgewogICAgdHhuYSBBcHBsaWNhdGlvbkFyZ3MgMQogICAgZXh0cmFjdCAyIDAKICAgIHR4bmEgQXBwbGljYXRpb25BcmdzIDIKICAgIGJ0b2kKICAgIHR4bmFzIEFwcGxpY2F0aW9ucwogICAgdHhuYSBBcHBsaWNhdGlvbkFyZ3MgMwogICAgZXh0cmFjdCAyIDAKICAgIC8vIHNtYXJ0X2NvbnRyYWN0cy9Mb2dnaW5nLmFsZ28udHM6NDUKICAgIC8vIGVtaXRfbG9nKGV2ZW50TmFtZTogc3RyaW5nLCBhZ2VudElEOiBBcHBsaWNhdGlvbiwgc3RhdHVzOiBzdHJpbmcpOiB2b2lkIHsKICAgIGNhbGxzdWIgZW1pdF9sb2cKICAgIHB1c2hpbnQgMSAvLyAxCiAgICByZXR1cm4KCm1haW5fY3JlYXRlQXBwbGljYXRpb25fcm91dGVAMzoKICAgIC8vIHNtYXJ0X2NvbnRyYWN0cy9Mb2dnaW5nLmFsZ28udHM6MzYKICAgIC8vIEBhYmltZXRob2QoKQogICAgdHhuIE9uQ29tcGxldGlvbgogICAgIQogICAgYXNzZXJ0IC8vIE9uQ29tcGxldGlvbiBpcyBub3QgTm9PcAogICAgdHhuIEFwcGxpY2F0aW9uSUQKICAgICEKICAgIGFzc2VydCAvLyBjYW4gb25seSBjYWxsIHdoZW4gY3JlYXRpbmcKICAgIC8vIHNtYXJ0X2NvbnRyYWN0cy9Mb2dnaW5nLmFsZ28udHM6MjgKICAgIC8vIGV4cG9ydCBjbGFzcyBMb2dnaW5nQ29udHJhY3QgZXh0ZW5kcyBDb250cmFjdCB7CiAgICB0eG5hIEFwcGxpY2F0aW9uQXJncyAxCiAgICBidG9pCiAgICB0eG5hcyBBY2NvdW50cwogICAgLy8gc21hcnRfY29udHJhY3RzL0xvZ2dpbmcuYWxnby50czozNgogICAgLy8gQGFiaW1ldGhvZCgpCiAgICBjYWxsc3ViIGNyZWF0ZUFwcGxpY2F0aW9uCiAgICBwdXNoaW50IDEgLy8gMQogICAgcmV0dXJuCgoKLy8gc21hcnRfY29udHJhY3RzL0xvZ2dpbmcuYWxnby50czo6TG9nZ2luZ0NvbnRyYWN0LmNyZWF0ZUFwcGxpY2F0aW9uKG93bmVyQWRkcmVzczogYnl0ZXMpIC0+IHZvaWQ6CmNyZWF0ZUFwcGxpY2F0aW9uOgogICAgLy8gc21hcnRfY29udHJhY3RzL0xvZ2dpbmcuYWxnby50czozNi0zNwogICAgLy8gQGFiaW1ldGhvZCgpCiAgICAvLyBjcmVhdGVBcHBsaWNhdGlvbihvd25lckFkZHJlc3M6IEFjY291bnQpOiB2b2lkIHsKICAgIHByb3RvIDEgMAogICAgLy8gc21hcnRfY29udHJhY3RzL0xvZ2dpbmcuYWxnby50czozMQogICAgLy8gTUFOQUdFUl9BRERSRVNTID0gR2xvYmFsU3RhdGU8QWNjb3VudD4oKTsKICAgIHB1c2hieXRlcyAiTUFOQUdFUl9BRERSRVNTIgogICAgLy8gc21hcnRfY29udHJhY3RzL0xvZ2dpbmcuYWxnby50czo0MAogICAgLy8gdGhpcy5NQU5BR0VSX0FERFJFU1MudmFsdWUgPSBvd25lckFkZHJlc3M7CiAgICBmcmFtZV9kaWcgLTEKICAgIGFwcF9nbG9iYWxfcHV0CiAgICByZXRzdWIKCgovLyBzbWFydF9jb250cmFjdHMvTG9nZ2luZy5hbGdvLnRzOjpMb2dnaW5nQ29udHJhY3QuZW1pdF9sb2coZXZlbnROYW1lOiBieXRlcywgYWdlbnRJRDogdWludDY0LCBzdGF0dXM6IGJ5dGVzKSAtPiB2b2lkOgplbWl0X2xvZzoKICAgIC8vIHNtYXJ0X2NvbnRyYWN0cy9Mb2dnaW5nLmFsZ28udHM6NDUKICAgIC8vIGVtaXRfbG9nKGV2ZW50TmFtZTogc3RyaW5nLCBhZ2VudElEOiBBcHBsaWNhdGlvbiwgc3RhdHVzOiBzdHJpbmcpOiB2b2lkIHsKICAgIHByb3RvIDMgMAogICAgLy8gc21hcnRfY29udHJhY3RzL0xvZ2dpbmcuYWxnby50czo0NgogICAgLy8gbG9nKCJldmVudDoiLCBldmVudE5hbWUsICJhZ2VudElEOiIsIGFnZW50SUQuaWQsICJzdGF0dXM6Iiwgc3RhdHVzKTsKICAgIHB1c2hieXRlcyAiZXZlbnQ6IgogICAgZnJhbWVfZGlnIC0zCiAgICBjb25jYXQKICAgIHB1c2hieXRlcyAiYWdlbnRJRDoiCiAgICBjb25jYXQKICAgIGZyYW1lX2RpZyAtMgogICAgaXRvYgogICAgY29uY2F0CiAgICBwdXNoYnl0ZXMgInN0YXR1czoiCiAgICBjb25jYXQKICAgIGZyYW1lX2RpZyAtMQogICAgY29uY2F0CiAgICBsb2cKICAgIHJldHN1Ygo=","clear":"I3ByYWdtYSB2ZXJzaW9uIDEwCiNwcmFnbWEgdHlwZXRyYWNrIGZhbHNlCgovLyBAYWxnb3JhbmRmb3VuZGF0aW9uL2FsZ29yYW5kLXR5cGVzY3JpcHQvYmFzZS1jb250cmFjdC5kLnRzOjpCYXNlQ29udHJhY3QuY2xlYXJTdGF0ZVByb2dyYW0oKSAtPiB1aW50NjQ6Cm1haW46CiAgICBwdXNoaW50IDEgLy8gMQogICAgcmV0dXJuCg=="},"byteCode":{"approval":"CjEbQQAVggIE2lP+/gS+a/uJNhoAjgIAIgADgQBDMRkURDEYRDYaAVcCADYaAhfAMjYaA1cCAIgAL4EBQzEZFEQxGBRENhoBF8AciAADgQFDigEAgA9NQU5BR0VSX0FERFJFU1OL/2eJigMAgAZldmVudDqL/VCACGFnZW50SUQ6UIv+FlCAB3N0YXR1czpQi/9QsIk=","clear":"CoEBQw=="},"events":[],"templateVariables":{}} as unknown as Arc56Contract
+export const APP_SPEC: Arc56Contract = {"name":"LoggingContract","structs":{},"methods":[{"name":"createApplication","args":[{"type":"account","name":"ownerAddress"}],"returns":{"type":"void"},"actions":{"create":["NoOp"],"call":[]},"readonly":false,"events":[],"recommendations":{}},{"name":"emit_log","args":[{"type":"string","name":"eventName"},{"type":"uint64","name":"agentID"},{"type":"string","name":"status"}],"returns":{"type":"void"},"actions":{"create":[],"call":["NoOp"]},"readonly":false,"events":[],"recommendations":{}}],"arcs":[22,28],"networks":{},"state":{"schema":{"global":{"ints":0,"bytes":1},"local":{"ints":0,"bytes":0}},"keys":{"global":{"MANAGER_ADDRESS":{"keyType":"AVMString","valueType":"address","key":"TUFOQUdFUl9BRERSRVNT"}},"local":{},"box":{}},"maps":{"global":{},"local":{},"box":{}}},"bareActions":{"create":[],"call":[]},"sourceInfo":{"approval":{"sourceInfo":[{"pc":[33,62],"errorMessage":"OnCompletion is not NoOp"},{"pc":[66],"errorMessage":"can only call when creating"},{"pc":[36],"errorMessage":"can only call when not creating"}],"pcOffsetMethod":"none"},"clear":{"sourceInfo":[],"pcOffsetMethod":"none"}},"source":{"approval":"I3ByYWdtYSB2ZXJzaW9uIDEwCiNwcmFnbWEgdHlwZXRyYWNrIGZhbHNlCgovLyBAYWxnb3JhbmRmb3VuZGF0aW9uL2FsZ29yYW5kLXR5cGVzY3JpcHQvYXJjNC9pbmRleC5kLnRzOjpDb250cmFjdC5hcHByb3ZhbFByb2dyYW0oKSAtPiB1aW50NjQ6Cm1haW46CiAgICAvLyBzbWFydF9jb250cmFjdHMvTG9nZ2luZy5hbGdvLnRzOjI4CiAgICAvLyBleHBvcnQgY2xhc3MgTG9nZ2luZ0NvbnRyYWN0IGV4dGVuZHMgQ29udHJhY3QgewogICAgdHhuIE51bUFwcEFyZ3MKICAgIGJ6IG1haW5fYWZ0ZXJfaWZfZWxzZUA4CiAgICBwdXNoYnl0ZXNzIDB4ZGE1M2ZlZmUgMHhkMzVmNTk0YSAvLyBtZXRob2QgImNyZWF0ZUFwcGxpY2F0aW9uKGFjY291bnQpdm9pZCIsIG1ldGhvZCAiZW1pdF9sb2coc3RyaW5nLHVpbnQ2NCxzdHJpbmcpdm9pZCIKICAgIHR4bmEgQXBwbGljYXRpb25BcmdzIDAKICAgIG1hdGNoIG1haW5fY3JlYXRlQXBwbGljYXRpb25fcm91dGVAMyBtYWluX2VtaXRfbG9nX3JvdXRlQDQKCm1haW5fYWZ0ZXJfaWZfZWxzZUA4OgogICAgLy8gc21hcnRfY29udHJhY3RzL0xvZ2dpbmcuYWxnby50czoyOAogICAgLy8gZXhwb3J0IGNsYXNzIExvZ2dpbmdDb250cmFjdCBleHRlbmRzIENvbnRyYWN0IHsKICAgIHB1c2hpbnQgMCAvLyAwCiAgICByZXR1cm4KCm1haW5fZW1pdF9sb2dfcm91dGVANDoKICAgIC8vIHNtYXJ0X2NvbnRyYWN0cy9Mb2dnaW5nLmFsZ28udHM6NDUKICAgIC8vIGVtaXRfbG9nKGV2ZW50TmFtZTogc3RyaW5nLCBhZ2VudElEOiB1aW50NjQsIHN0YXR1czogc3RyaW5nKTogdm9pZCB7CiAgICB0eG4gT25Db21wbGV0aW9uCiAgICAhCiAgICBhc3NlcnQgLy8gT25Db21wbGV0aW9uIGlzIG5vdCBOb09wCiAgICB0eG4gQXBwbGljYXRpb25JRAogICAgYXNzZXJ0IC8vIGNhbiBvbmx5IGNhbGwgd2hlbiBub3QgY3JlYXRpbmcKICAgIC8vIHNtYXJ0X2NvbnRyYWN0cy9Mb2dnaW5nLmFsZ28udHM6MjgKICAgIC8vIGV4cG9ydCBjbGFzcyBMb2dnaW5nQ29udHJhY3QgZXh0ZW5kcyBDb250cmFjdCB7CiAgICB0eG5hIEFwcGxpY2F0aW9uQXJncyAxCiAgICBleHRyYWN0IDIgMAogICAgdHhuYSBBcHBsaWNhdGlvbkFyZ3MgMgogICAgYnRvaQogICAgdHhuYSBBcHBsaWNhdGlvbkFyZ3MgMwogICAgZXh0cmFjdCAyIDAKICAgIC8vIHNtYXJ0X2NvbnRyYWN0cy9Mb2dnaW5nLmFsZ28udHM6NDUKICAgIC8vIGVtaXRfbG9nKGV2ZW50TmFtZTogc3RyaW5nLCBhZ2VudElEOiB1aW50NjQsIHN0YXR1czogc3RyaW5nKTogdm9pZCB7CiAgICBjYWxsc3ViIGVtaXRfbG9nCiAgICBwdXNoaW50IDEgLy8gMQogICAgcmV0dXJuCgptYWluX2NyZWF0ZUFwcGxpY2F0aW9uX3JvdXRlQDM6CiAgICAvLyBzbWFydF9jb250cmFjdHMvTG9nZ2luZy5hbGdvLnRzOjM2CiAgICAvLyBAYWJpbWV0aG9kKCkKICAgIHR4biBPbkNvbXBsZXRpb24KICAgICEKICAgIGFzc2VydCAvLyBPbkNvbXBsZXRpb24gaXMgbm90IE5vT3AKICAgIHR4biBBcHBsaWNhdGlvbklECiAgICAhCiAgICBhc3NlcnQgLy8gY2FuIG9ubHkgY2FsbCB3aGVuIGNyZWF0aW5nCiAgICAvLyBzbWFydF9jb250cmFjdHMvTG9nZ2luZy5hbGdvLnRzOjI4CiAgICAvLyBleHBvcnQgY2xhc3MgTG9nZ2luZ0NvbnRyYWN0IGV4dGVuZHMgQ29udHJhY3QgewogICAgdHhuYSBBcHBsaWNhdGlvbkFyZ3MgMQogICAgYnRvaQogICAgdHhuYXMgQWNjb3VudHMKICAgIC8vIHNtYXJ0X2NvbnRyYWN0cy9Mb2dnaW5nLmFsZ28udHM6MzYKICAgIC8vIEBhYmltZXRob2QoKQogICAgY2FsbHN1YiBjcmVhdGVBcHBsaWNhdGlvbgogICAgcHVzaGludCAxIC8vIDEKICAgIHJldHVybgoKCi8vIHNtYXJ0X2NvbnRyYWN0cy9Mb2dnaW5nLmFsZ28udHM6OkxvZ2dpbmdDb250cmFjdC5jcmVhdGVBcHBsaWNhdGlvbihvd25lckFkZHJlc3M6IGJ5dGVzKSAtPiB2b2lkOgpjcmVhdGVBcHBsaWNhdGlvbjoKICAgIC8vIHNtYXJ0X2NvbnRyYWN0cy9Mb2dnaW5nLmFsZ28udHM6MzYtMzcKICAgIC8vIEBhYmltZXRob2QoKQogICAgLy8gY3JlYXRlQXBwbGljYXRpb24ob3duZXJBZGRyZXNzOiBBY2NvdW50KTogdm9pZCB7CiAgICBwcm90byAxIDAKICAgIC8vIHNtYXJ0X2NvbnRyYWN0cy9Mb2dnaW5nLmFsZ28udHM6MzEKICAgIC8vIE1BTkFHRVJfQUREUkVTUyA9IEdsb2JhbFN0YXRlPEFjY291bnQ+KCk7CiAgICBwdXNoYnl0ZXMgIk1BTkFHRVJfQUREUkVTUyIKICAgIC8vIHNtYXJ0X2NvbnRyYWN0cy9Mb2dnaW5nLmFsZ28udHM6NDAKICAgIC8vIHRoaXMuTUFOQUdFUl9BRERSRVNTLnZhbHVlID0gb3duZXJBZGRyZXNzOwogICAgZnJhbWVfZGlnIC0xCiAgICBhcHBfZ2xvYmFsX3B1dAogICAgcmV0c3ViCgoKLy8gc21hcnRfY29udHJhY3RzL0xvZ2dpbmcuYWxnby50czo6TG9nZ2luZ0NvbnRyYWN0LmVtaXRfbG9nKGV2ZW50TmFtZTogYnl0ZXMsIGFnZW50SUQ6IHVpbnQ2NCwgc3RhdHVzOiBieXRlcykgLT4gdm9pZDoKZW1pdF9sb2c6CiAgICAvLyBzbWFydF9jb250cmFjdHMvTG9nZ2luZy5hbGdvLnRzOjQ1CiAgICAvLyBlbWl0X2xvZyhldmVudE5hbWU6IHN0cmluZywgYWdlbnRJRDogdWludDY0LCBzdGF0dXM6IHN0cmluZyk6IHZvaWQgewogICAgcHJvdG8gMyAwCiAgICAvLyBzbWFydF9jb250cmFjdHMvTG9nZ2luZy5hbGdvLnRzOjQ2CiAgICAvLyBsb2coImV2ZW50OiIsIGV2ZW50TmFtZSwgImFnZW50SUQ6IiwgYWdlbnRJRCwgInN0YXR1czoiLCBzdGF0dXMpOwogICAgcHVzaGJ5dGVzICJldmVudDoiCiAgICBmcmFtZV9kaWcgLTMKICAgIGNvbmNhdAogICAgcHVzaGJ5dGVzICJhZ2VudElEOiIKICAgIGNvbmNhdAogICAgZnJhbWVfZGlnIC0yCiAgICBpdG9iCiAgICBjb25jYXQKICAgIHB1c2hieXRlcyAic3RhdHVzOiIKICAgIGNvbmNhdAogICAgZnJhbWVfZGlnIC0xCiAgICBjb25jYXQKICAgIGxvZwogICAgcmV0c3ViCg==","clear":"I3ByYWdtYSB2ZXJzaW9uIDEwCiNwcmFnbWEgdHlwZXRyYWNrIGZhbHNlCgovLyBAYWxnb3JhbmRmb3VuZGF0aW9uL2FsZ29yYW5kLXR5cGVzY3JpcHQvYmFzZS1jb250cmFjdC5kLnRzOjpCYXNlQ29udHJhY3QuY2xlYXJTdGF0ZVByb2dyYW0oKSAtPiB1aW50NjQ6Cm1haW46CiAgICBwdXNoaW50IDEgLy8gMQogICAgcmV0dXJuCg=="},"byteCode":{"approval":"CjEbQQAVggIE2lP+/gTTX1lKNhoAjgIAIAADgQBDMRkURDEYRDYaAVcCADYaAhc2GgNXAgCIAC+BAUMxGRREMRgURDYaARfAHIgAA4EBQ4oBAIAPTUFOQUdFUl9BRERSRVNTi/9niYoDAIAGZXZlbnQ6i/1QgAhhZ2VudElEOlCL/hZQgAdzdGF0dXM6UIv/ULCJ","clear":"CoEBQw=="},"events":[],"templateVariables":{}} as unknown as Arc56Contract
 
 /**
  * A state record containing binary data
@@ -73,9 +73,9 @@ export type LoggingContractArgs = {
     'createApplication(account)void': {
       ownerAddress: Uint8Array | string
     }
-    'emit_log(string,application,string)void': {
+    'emit_log(string,uint64,string)void': {
       eventName: string
-      agentId: bigint
+      agentId: bigint | number
       status: string
     }
   }
@@ -84,7 +84,7 @@ export type LoggingContractArgs = {
    */
   tuple: {
     'createApplication(account)void': [ownerAddress: Uint8Array | string]
-    'emit_log(string,application,string)void': [eventName: string, agentId: bigint, status: string]
+    'emit_log(string,uint64,string)void': [eventName: string, agentId: bigint | number, status: string]
   }
 }
 
@@ -93,7 +93,7 @@ export type LoggingContractArgs = {
  */
 export type LoggingContractReturns = {
   'createApplication(account)void': void
-  'emit_log(string,application,string)void': void
+  'emit_log(string,uint64,string)void': void
 }
 
 /**
@@ -109,10 +109,10 @@ export type LoggingContractTypes = {
       argsTuple: LoggingContractArgs['tuple']['createApplication(account)void']
       returns: LoggingContractReturns['createApplication(account)void']
     }>
-    & Record<'emit_log(string,application,string)void' | 'emit_log', {
-      argsObj: LoggingContractArgs['obj']['emit_log(string,application,string)void']
-      argsTuple: LoggingContractArgs['tuple']['emit_log(string,application,string)void']
-      returns: LoggingContractReturns['emit_log(string,application,string)void']
+    & Record<'emit_log(string,uint64,string)void' | 'emit_log', {
+      argsObj: LoggingContractArgs['obj']['emit_log(string,uint64,string)void']
+      argsTuple: LoggingContractArgs['tuple']['emit_log(string,uint64,string)void']
+      returns: LoggingContractReturns['emit_log(string,uint64,string)void']
     }>
   /**
    * Defines the shape of the state of the application.
@@ -212,15 +212,15 @@ export abstract class LoggingContractParamsFactory {
   }
 
   /**
-   * Constructs a no op call for the emit_log(string,application,string)void ABI method
+   * Constructs a no op call for the emit_log(string,uint64,string)void ABI method
    *
    * @param params Parameters for the call
    * @returns An `AppClientMethodCallParams` object for the call
    */
-  static emitLog(params: CallParams<LoggingContractArgs['obj']['emit_log(string,application,string)void'] | LoggingContractArgs['tuple']['emit_log(string,application,string)void']> & CallOnComplete): AppClientMethodCallParams & CallOnComplete {
+  static emitLog(params: CallParams<LoggingContractArgs['obj']['emit_log(string,uint64,string)void'] | LoggingContractArgs['tuple']['emit_log(string,uint64,string)void']> & CallOnComplete): AppClientMethodCallParams & CallOnComplete {
     return {
       ...params,
-      method: 'emit_log(string,application,string)void' as const,
+      method: 'emit_log(string,uint64,string)void' as const,
       args: Array.isArray(params.args) ? params.args : [params.args.eventName, params.args.agentId, params.args.status],
     }
   }
@@ -466,12 +466,12 @@ export class LoggingContractClient {
     },
 
     /**
-     * Makes a call to the LoggingContract smart contract using the `emit_log(string,application,string)void` ABI method.
+     * Makes a call to the LoggingContract smart contract using the `emit_log(string,uint64,string)void` ABI method.
      *
      * @param params The params for the smart contract call
      * @returns The call params
      */
-    emitLog: (params: CallParams<LoggingContractArgs['obj']['emit_log(string,application,string)void'] | LoggingContractArgs['tuple']['emit_log(string,application,string)void']> & {onComplete?: OnApplicationComplete.NoOpOC}) => {
+    emitLog: (params: CallParams<LoggingContractArgs['obj']['emit_log(string,uint64,string)void'] | LoggingContractArgs['tuple']['emit_log(string,uint64,string)void']> & {onComplete?: OnApplicationComplete.NoOpOC}) => {
       return this.appClient.params.call(LoggingContractParamsFactory.emitLog(params))
     },
 
@@ -492,12 +492,12 @@ export class LoggingContractClient {
     },
 
     /**
-     * Makes a call to the LoggingContract smart contract using the `emit_log(string,application,string)void` ABI method.
+     * Makes a call to the LoggingContract smart contract using the `emit_log(string,uint64,string)void` ABI method.
      *
      * @param params The params for the smart contract call
      * @returns The call transaction
      */
-    emitLog: (params: CallParams<LoggingContractArgs['obj']['emit_log(string,application,string)void'] | LoggingContractArgs['tuple']['emit_log(string,application,string)void']> & {onComplete?: OnApplicationComplete.NoOpOC}) => {
+    emitLog: (params: CallParams<LoggingContractArgs['obj']['emit_log(string,uint64,string)void'] | LoggingContractArgs['tuple']['emit_log(string,uint64,string)void']> & {onComplete?: OnApplicationComplete.NoOpOC}) => {
       return this.appClient.createTransaction.call(LoggingContractParamsFactory.emitLog(params))
     },
 
@@ -518,14 +518,14 @@ export class LoggingContractClient {
     },
 
     /**
-     * Makes a call to the LoggingContract smart contract using the `emit_log(string,application,string)void` ABI method.
+     * Makes a call to the LoggingContract smart contract using the `emit_log(string,uint64,string)void` ABI method.
      *
      * @param params The params for the smart contract call
      * @returns The call result
      */
-    emitLog: async (params: CallParams<LoggingContractArgs['obj']['emit_log(string,application,string)void'] | LoggingContractArgs['tuple']['emit_log(string,application,string)void']> & SendParams & {onComplete?: OnApplicationComplete.NoOpOC}) => {
+    emitLog: async (params: CallParams<LoggingContractArgs['obj']['emit_log(string,uint64,string)void'] | LoggingContractArgs['tuple']['emit_log(string,uint64,string)void']> & SendParams & {onComplete?: OnApplicationComplete.NoOpOC}) => {
       const result = await this.appClient.send.call(LoggingContractParamsFactory.emitLog(params))
-      return {...result, return: result.return as unknown as (undefined | LoggingContractReturns['emit_log(string,application,string)void'])}
+      return {...result, return: result.return as unknown as (undefined | LoggingContractReturns['emit_log(string,uint64,string)void'])}
     },
 
   }
@@ -571,9 +571,9 @@ export class LoggingContractClient {
     const resultMappers: Array<undefined | ((x: ABIReturn | undefined) => any)> = []
     return {
       /**
-       * Add a emit_log(string,application,string)void method call against the LoggingContract contract
+       * Add a emit_log(string,uint64,string)void method call against the LoggingContract contract
        */
-      emitLog(params: CallParams<LoggingContractArgs['obj']['emit_log(string,application,string)void'] | LoggingContractArgs['tuple']['emit_log(string,application,string)void']> & {onComplete?: OnApplicationComplete.NoOpOC}) {
+      emitLog(params: CallParams<LoggingContractArgs['obj']['emit_log(string,uint64,string)void'] | LoggingContractArgs['tuple']['emit_log(string,uint64,string)void']> & {onComplete?: OnApplicationComplete.NoOpOC}) {
         promiseChain = promiseChain.then(async () => composer.addAppCallMethodCall(await client.params.emitLog(params)))
         resultMappers.push(undefined)
         return this
@@ -614,13 +614,13 @@ export class LoggingContractClient {
 }
 export type LoggingContractComposer<TReturns extends [...any[]] = []> = {
   /**
-   * Calls the emit_log(string,application,string)void ABI method.
+   * Calls the emit_log(string,uint64,string)void ABI method.
    *
    * @param args The arguments for the contract call
    * @param params Any additional parameters for the call
    * @returns The typed transaction composer so you can fluently chain multiple calls or call execute to execute all queued up transactions
    */
-  emitLog(params?: CallParams<LoggingContractArgs['obj']['emit_log(string,application,string)void'] | LoggingContractArgs['tuple']['emit_log(string,application,string)void']>): LoggingContractComposer<[...TReturns, LoggingContractReturns['emit_log(string,application,string)void'] | undefined]>
+  emitLog(params?: CallParams<LoggingContractArgs['obj']['emit_log(string,uint64,string)void'] | LoggingContractArgs['tuple']['emit_log(string,uint64,string)void']>): LoggingContractComposer<[...TReturns, LoggingContractReturns['emit_log(string,uint64,string)void'] | undefined]>
 
   /**
    * Makes a clear_state call to an existing instance of the LoggingContract smart contract.
