@@ -6,7 +6,7 @@ export default function PodMarketplace() {
   const router = useRouter();
   const { category, filter } = router.query;
   const [sortBy, setSortBy] = useState('popular');
-  const [agents, setAgents] = useState([]);
+  const [agents, setAgents] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

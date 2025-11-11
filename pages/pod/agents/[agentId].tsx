@@ -9,7 +9,7 @@ export default function AgentDetail() {
   const router = useRouter();
   const { agentId } = router.query;
   const [showModal, setShowModal] = useState(false);
-  const [agent, setAgent] = useState(null);
+  const [agent, setAgent] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const { activeAccount } = useWallet();
 
@@ -34,7 +34,7 @@ export default function AgentDetail() {
   };
 
   const handleHire = () => {
-    if (!activeAccount) return;
+    if (!activeAccount || !agent?.subdomain) return;
     // Navigate to agent URL
     window.open(`https://${agent.subdomain}.0rca.live/`, '_blank');
   };

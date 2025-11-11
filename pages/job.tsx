@@ -12,6 +12,10 @@ interface Job {
   job_input_hash?: string;
   job_output?: string;
   created_at: string;
+  agents?: {
+    name: string;
+    subdomain: string;
+  };
 }
 
 export default function JobsPage() {
@@ -47,7 +51,13 @@ export default function JobsPage() {
     try {
       const { data, error } = await supabase
         .from('access_tokens')
-        .select('*')
+        .select(`
+          *,
+          agents (
+            name,
+            subdomain
+          )
+        `)
         .eq('user_id', userId)
         .order('created_at', { ascending: false });
 
@@ -113,7 +123,28 @@ export default function JobsPage() {
               <div className="flex items-start justify-between mb-4">
                 <div>
                   <h3 className="text-lg font-semibold text-white mb-1">Job {job.job_id}</h3>
-                  <p className="text-neutral-400 text-sm">Agent ID: {job.agent_id}</p>
+                  <div className="space-y-1">
+                    <p className="text-neutral-400 text-sm">Agent ID: {job.agent_id}</p>
+                    {job.agents && (
+                      <div className="flex items-center gap-2">
+                        <a 
+                          href={`/pod/agents/${job.agent_id}`}
+                          className="text-mint-glow hover:underline text-sm font-medium"
+                        >
+                          {job.agents.name}
+                        </a>
+                        <span className="text-neutral-500">•</span>
+                        <a 
+                          href={`https://${job.agents.subdomain}.0rca.live/`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-neutral-400 hover:text-white text-sm"
+                        >
+                          {job.agents.subdomain}.0rca.live
+                        </a>
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div className="text-right">
                   <div className="text-neutral-400 text-sm">
