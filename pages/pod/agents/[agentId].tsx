@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { useWallet } from '@txnlab/use-wallet-react';
+import algosdk from 'algosdk';
 import { GenerativeThumbnail } from '@/components/GenerativeThumbnail';
 import { DemoInputModal } from '@/components/DemoInputModal';
 
@@ -11,7 +12,7 @@ export default function AgentDetail() {
   const [showModal, setShowModal] = useState(false);
   const [agent, setAgent] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const { activeAccount } = useWallet();
+  const { activeAccount, signTransactions, algodClient } = useWallet();
 
   useEffect(() => {
     if (agentId) {
@@ -33,10 +34,102 @@ export default function AgentDetail() {
     router.push(`/pod/agents/${agentId}/jobs/job-1`);
   };
 
-  const handleHire = () => {
+  const handleHire = async () => {
     if (!activeAccount || !agent?.subdomain) return;
-    // Navigate to agent URL
-    window.open(`https://${agent.subdomain}.0rca.live/`, '_blank');
+    
+    try {
+      console.log('Starting job creation...');
+      
+      // Create job on agent
+      const jobResponse = await fetch(`https://${agent.subdomain}.0rca.live/start_job`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          sender_address: activeAccount.address,
+          job_input: agent.example_input || 'Default job input'
+        })
+      });
+      
+      const jobData = await jobResponse.json();
+      console.log('Job created:', jobData);
+      
+      if (!jobData.unsigned_group_txn) {
+        throw new Error('No unsigned transaction received');
+      }
+      
+      // Decode unsigned transaction
+      const unsignedTxnBytes = new Uint8Array(Buffer.from(jobData.unsigned_group_txn, 'base64'));
+      console.log('Unsigned transaction bytes:', unsignedTxnBytes);
+      const signed = await signTransactions([unsignedTxnBytes]);
+      console.log('Signed transaction:', signed);
+      // Sign transactions
+      console.log('Signing transactions...');
+const signedTxns = signed.filter((txn): txn is Uint8Array => txn !== null);
+      console.log('Signed transactions:', signedTxns);
+      if (signedTxns.length === 0) {
+  throw new Error("No valid signed transactions returned.");
+}
+      // Send transaction
+      console.log('Sending transaction...');
+      const { txid } = await algodClient.sendRawTransaction(signedTxns).do();
+      console.log('Transaction ID:', txid);
+      
+      // Wait for confirmation
+      console.log('Waiting for confirmation...');
+      const result = await algosdk.waitForConfirmation(algodClient, txid, 4);
+      console.log(`Transaction confirmed at round ${result['confirmedRound']}`);
+      
+      // Submit payment verification
+      console.log('Submitting payment verification...');
+      const paymentResponse = await fetch(`https://${agent.subdomain}.0rca.live/submit_payment`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          job_id: jobData.job_id,
+          txid: jobData.txn_ids || [txid]
+        })
+      });
+      
+      const paymentData = await paymentResponse.json();
+      console.log('Payment verification response:', paymentData);
+      
+      if (paymentData.status === 'success') {
+        console.log('Payment verified, polling for job results...');
+        
+        // Poll for job results
+        const pollJobResult = async () => {
+          const resultResponse = await fetch(`https://${agent.subdomain}.0rca.live/job/${jobData.job_id}?access_token=${paymentData.access_token}`);
+          const resultData = await resultResponse.json();
+          console.log('Job status:', resultData);
+          
+          if (resultData.status === 'succeeded') {
+            console.log('Job completed successfully!');
+            console.log('Job output:', resultData.output);
+            alert(`Job completed successfully!\nJob ID: ${jobData.job_id}\nOutput: ${resultData.output}`);
+          } else if (resultData.status === 'failed') {
+            console.log('Job failed');
+            alert(`Job failed: ${jobData.job_id}`);
+          } else {
+            console.log(`Job status: ${resultData.status}, polling again in 3 seconds...`);
+            setTimeout(pollJobResult, 3000);
+          }
+        };
+        
+        // Start polling
+        setTimeout(pollJobResult, 2000);
+        alert(`Job started successfully! Job ID: ${jobData.job_id}\nPolling for results...`);
+      } else {
+        throw new Error(paymentData.message || 'Payment verification failed');
+      }
+      
+    } catch (error) {
+      console.error('Error hiring agent:', error);
+      alert('Failed to hire agent: ' + error);
+    }
   };
 
   return (
