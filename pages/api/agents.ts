@@ -1,5 +1,10 @@
 import { NextApiRequest, NextApiResponse } from 'next'
 import { createClient } from '@supabase/supabase-js'
+import { createHash } from 'crypto'
+
+function generateAgentToken(): string {
+  return createHash('sha256').update(Math.random().toString()).digest('hex')
+}
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -34,8 +39,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     console.log('Authenticated user:', user.id)
-    // Add user_id to agentData
-    const cleanAgentData = { ...agentData, user_id: user.id }
+    // Add user_id and agent_token to agentData
+    const cleanAgentData = { ...agentData, user_id: user.id, agent_token: generateAgentToken() }
 
     // Check if agent already exists for this repo
     const { data: existingAgent } = await supabase
