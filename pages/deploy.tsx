@@ -27,7 +27,7 @@ interface Repository {
 export default function DeployPage() {
   const { activeAddress, transactionSigner } = useWallet()
   const algorand = AlgorandClient.testNet()
-  const DEFAULT_APP_ID = 749370728
+  const DEFAULT_APP_ID =  749654977
   
   const [mounted, setMounted] = useState(false)
   const [user, setUser] = useState<User | null>(null)
