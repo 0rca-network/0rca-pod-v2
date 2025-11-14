@@ -43,7 +43,9 @@ export default function DeployPage() {
   const [dataInput, setDataInput] = useState('')
   const [exampleInput, setExampleInput] = useState('')
   const [exampleOutput, setExampleOutput] = useState('')
-  const [deploymentStatus, setDeploymentStatus] = useState<'idle' | 'deploying' | 'success' | 'error'>('idle')
+  const [deploymentStatus, setDeploymentStatus] = useState<'idle' | 'blockchain' | 'waiting-container' | 'deploying' | 'success' | 'error'>('idle')
+  const [blockchainData, setBlockchainData] = useState<{AgentContractID: any, agentAddress: string, agentToken: string} | null>(null)
+  const [containerUrl, setContainerUrl] = useState('')
   const [deploymentLogs, setDeploymentLogs] = useState<string[]>([])
   const [error, setError] = useState('')
   const [packages, setPackages] = useState<any[]>([])
@@ -142,7 +144,7 @@ export default function DeployPage() {
           agentName: agentName,
           agentIpfs: `https://${subdomain}.0rca.live`,
           pricing: 1, // 1 ALGO in microAlgos
-          agentImage: selectedPackage
+          agentImage: 'pending'
         },
         sender: activeAddress,
         signer: transactionSigner,
@@ -152,8 +154,14 @@ export default function DeployPage() {
       const AgentContractID = result.return
       const agentAddress = getApplicationAddress(Number(AgentContractID)).toString()
       
+      // Generate SHA256 hash for agent token
+      const tokenData = `${AgentContractID}-${agentAddress}-${Date.now()}-${Math.random()}`
+      const agentToken = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(tokenData))
+        .then(hashBuffer => Array.from(new Uint8Array(hashBuffer))
+          .map(b => b.toString(16).padStart(2, '0')).join(''))
+      
       setDeploymentLogs(prev => [...prev, '✅ Agent created on blockchain successfully!'])
-      return { AgentContractID, agentAddress }
+      return { AgentContractID, agentAddress, agentToken }
     } catch (error) {
       console.error('Blockchain agent creation error:', error)
       setDeploymentLogs(prev => [...prev, `❌ Blockchain creation failed: ${error}`])
@@ -161,21 +169,41 @@ export default function DeployPage() {
     }
   }
 
-  const handleDeploy = async () => {
-    if (!agentName || !subdomain || !selectedRepo || !selectedPackage) {
-      setError('Agent name, subdomain, and Docker image are required')
+  const handleStep1 = async () => {
+    if (!agentName || !subdomain || !selectedRepo) {
+      setError('Agent name, subdomain, and repository are required')
+      return
+    }
+
+    setDeploymentStatus('blockchain')
+    setError('')
+    setDeploymentLogs(['🚀 Step 1: Creating agent on blockchain...'])
+
+    try {
+      const { AgentContractID, agentAddress, agentToken } = await createAgentOnChain()
+      setBlockchainData({ AgentContractID, agentAddress, agentToken })
+      setDeploymentStatus('waiting-container')
+      setDeploymentLogs(prev => [...prev, '✅ Step 1 Complete: Agent created on blockchain!', '📝 Step 2: Add blockchain data to your project and push container'])
+    } catch (error) {
+      console.error('Blockchain creation error:', error)
+      setDeploymentStatus('error')
+      setError('Failed to create agent on blockchain')
+    }
+  }
+
+  const handleStep2 = async () => {
+    if (!containerUrl) {
+      setError('Container URL is required')
       return
     }
 
     setDeploymentStatus('deploying')
     setError('')
-    setDeploymentLogs(['🚀 Starting deployment...'])
+    setDeploymentLogs(prev => [...prev, '🚀 Step 3: Starting deployment...'])
 
     try {
-      // Create agent on blockchain first - only proceed if successful
-      const { AgentContractID, agentAddress } = await createAgentOnChain()
       const deployPayload = {
-        image_name: selectedPackage,
+        image_name: containerUrl,
         app_name: subdomain,
         port: 8000
       }
@@ -225,8 +253,9 @@ export default function DeployPage() {
                   repo_owner: selectedRepo.owner.login,
                   repo_name: selectedRepo.name,
                   github_url: selectedRepo.html_url,
-                  agent_address: agentAddress,
-                  app_id: Number(AgentContractID),
+                  agent_address: blockchainData?.agentAddress,
+                  app_id: Number(blockchainData?.AgentContractID),
+                  agent_token: blockchainData?.agentToken,
                   price_microalgo: 1000000,
                   status: 'active',
                   runtime_status: 'active',
@@ -452,17 +481,7 @@ export default function DeployPage() {
                   </div>
                 </div>
 
-                <div className="mb-6">
-                  <label className="block text-neutral-300 text-sm mb-2">Docker Image *</label>
-                  <input
-                    type="text"
-                    value={selectedPackage || ''}
-                    onChange={(e) => setSelectedPackage(e.target.value)}
-                    className="w-full bg-neutral-700 text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#63f2d2]"
-                    placeholder="ghcr.io/nickthelegend/hello-server:latest"
-                  />
-                  <p className="text-neutral-400 text-xs mt-1">Enter the full Docker image path from GitHub Container Registry</p>
-                </div>
+
                 
                 {error && (
                   <div className="text-red-400 text-sm mb-4">{error}</div>
@@ -477,6 +496,32 @@ export default function DeployPage() {
                   </div>
                 )}
                 
+                {deploymentStatus === 'waiting-container' && blockchainData && (
+                  <div className="bg-blue-900 border border-blue-600 rounded-lg p-4 mb-4">
+                    <div className="text-blue-400 font-semibold mb-2">📝 Step 2: Add Blockchain Data to Your Project</div>
+                    <div className="text-blue-300 text-sm mb-3">
+                      Add these values to your project environment:
+                    </div>
+                    <div className="bg-black rounded p-3 font-mono text-xs text-green-400 mb-3">
+                      <div>AGENT_APP_ID={blockchainData.AgentContractID.toString()}</div>
+                      <div>AGENT_ADDRESS={blockchainData.agentAddress}</div>
+                      <div>AGENT_TOKEN={blockchainData.agentToken}</div>
+                    </div>
+                    <div className="text-blue-300 text-sm mb-3">
+                      Then push your container to GitHub Container Registry and enter the URL below:
+                    </div>
+                    <label className="block text-neutral-300 text-sm mb-2">Docker Container URL *</label>
+                    <input
+                      type="text"
+                      value={containerUrl}
+                      onChange={(e) => setContainerUrl(e.target.value)}
+                      className="w-full bg-neutral-700 text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#63f2d2] mb-3"
+                      placeholder="ghcr.io/username/repo:latest"
+                    />
+                    <p className="text-neutral-400 text-xs mb-3">Enter the full Docker image path from GitHub Container Registry</p>
+                  </div>
+                )}
+                
                 <div className="flex gap-3">
                   <button
                     onClick={() => setShowDeployForm(false)}
@@ -484,13 +529,31 @@ export default function DeployPage() {
                   >
                     Cancel
                   </button>
-                  <button
-                    onClick={handleDeploy}
-                    disabled={deploymentStatus === 'deploying' || (!mounted || !activeAddress)}
-                    className="flex-1 bg-[#63f2d2] text-black py-3 rounded-lg font-semibold hover:opacity-90 transition-opacity disabled:opacity-50"
-                  >
-                    {deploymentStatus === 'deploying' ? 'Deploying...' : 'Deploy Agent'}
-                  </button>
+                  {deploymentStatus === 'idle' ? (
+                    <button
+                      onClick={handleStep1}
+                      disabled={!mounted || !activeAddress}
+                      className="flex-1 bg-[#63f2d2] text-black py-3 rounded-lg font-semibold hover:opacity-90 transition-opacity disabled:opacity-50"
+                    >
+                      Step 1: Create Agent on Blockchain
+                    </button>
+                  ) : deploymentStatus === 'waiting-container' ? (
+                    <button
+                      onClick={handleStep2}
+                      disabled={!containerUrl}
+                      className="flex-1 bg-[#63f2d2] text-black py-3 rounded-lg font-semibold hover:opacity-90 transition-opacity disabled:opacity-50"
+                    >
+                      Step 2: Deploy Container
+                    </button>
+                  ) : (
+                    <button
+                      disabled
+                      className="flex-1 bg-neutral-500 text-neutral-300 py-3 rounded-lg font-semibold"
+                    >
+                      {deploymentStatus === 'blockchain' ? 'Creating on Blockchain...' : 
+                       deploymentStatus === 'deploying' ? 'Deploying...' : 'Processing...'}
+                    </button>
+                  )}
                 </div>
               </div>
               
@@ -498,11 +561,15 @@ export default function DeployPage() {
                 <div className="border-t border-neutral-700 pt-6">
                   <div className="flex items-center gap-2 mb-4">
                     <div className={`w-3 h-3 rounded-full ${
+                      deploymentStatus === 'blockchain' ? 'bg-blue-500 animate-pulse' :
+                      deploymentStatus === 'waiting-container' ? 'bg-orange-500' :
                       deploymentStatus === 'deploying' ? 'bg-yellow-500 animate-pulse' : 
                       deploymentStatus === 'success' ? 'bg-green-500' : 'bg-red-500'
                     }`} />
                     <h3 className="text-white font-semibold">
-                      {deploymentStatus === 'deploying' ? 'Deploying...' : 
+                      {deploymentStatus === 'blockchain' ? 'Step 1: Creating on Blockchain...' :
+                       deploymentStatus === 'waiting-container' ? 'Step 2: Waiting for Container' :
+                       deploymentStatus === 'deploying' ? 'Step 3: Deploying...' : 
                        deploymentStatus === 'success' ? 'Deployment Successful' : 'Deployment Failed'}
                     </h3>
                   </div>
