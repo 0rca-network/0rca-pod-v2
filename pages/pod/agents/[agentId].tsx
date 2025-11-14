@@ -55,14 +55,39 @@ export default function AgentDetail() {
       const jobData = await jobResponse.json();
       console.log('Job created:', jobData);
       
-      if (!jobData.unsigned_group_txn) {
+      if (!jobData.unsigned_group_txns || jobData.unsigned_group_txns.length === 0) {
         throw new Error('No unsigned transaction received');
       }
       
-      // Decode unsigned transaction
-      const unsignedTxnBytes = new Uint8Array(Buffer.from(jobData.unsigned_group_txn, 'base64'));
-      console.log('Unsigned transaction bytes:', unsignedTxnBytes);
-      const signed = await signTransactions([unsignedTxnBytes]);
+      // Handle double base64 encoding from backend
+      const cleanTxns = [];
+      for (const txnB64 of jobData.unsigned_group_txns) {
+        try {
+          // First decode from base64
+          const firstDecode = Buffer.from(txnB64, 'base64').toString();
+          // Second decode from base64 to get actual msgpack bytes
+          const txnBytes = new Uint8Array(Buffer.from(firstDecode, 'base64'));
+          // Decode and re-encode to ensure clean msgpack
+          const decoded = algosdk.decodeUnsignedTransaction(txnBytes);
+          const cleanBytes = algosdk.encodeUnsignedTransaction(decoded);
+          cleanTxns.push(cleanBytes);
+        } catch (e) {
+          console.error('Failed to decode double-encoded transaction:', e);
+          // Fallback to single decode
+          try {
+            const txnBytes = new Uint8Array(Buffer.from(txnB64, 'base64'));
+            const decoded = algosdk.decodeUnsignedTransaction(txnBytes);
+            const cleanBytes = algosdk.encodeUnsignedTransaction(decoded);
+            cleanTxns.push(cleanBytes);
+          } catch (e2) {
+            console.error('Fallback decode also failed:', e2);
+            cleanTxns.push(new Uint8Array(Buffer.from(txnB64, 'base64')));
+          }
+        }
+      }
+      console.log('Clean transactions for signing:', cleanTxns);
+      
+      const signed = await signTransactions(cleanTxns);
       console.log('Signed transaction:', signed);
       // Sign transactions
       console.log('Signing transactions...');
@@ -71,8 +96,8 @@ const signedTxns = signed.filter((txn): txn is Uint8Array => txn !== null);
       if (signedTxns.length === 0) {
   throw new Error("No valid signed transactions returned.");
 }
-      // Send transaction
-      console.log('Sending transaction...');
+      // Send transaction group
+      console.log('Sending transaction group...');
       const { txid } = await algodClient.sendRawTransaction(signedTxns).do();
       console.log('Transaction ID:', txid);
       
