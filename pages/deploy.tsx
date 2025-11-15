@@ -10,6 +10,7 @@ import { AlgorandClient } from '@algorandfoundation/algokit-utils'
 import { AgentsContractClient } from '@/contracts/AgentContracts'
 import { AlgoAmount } from '@algorandfoundation/algokit-utils/types/amount'
 import { getApplicationAddress } from 'algosdk'
+import { categorizeAgentByTags, AVAILABLE_TAGS } from '@/lib/categorize-agent'
 
 interface Repository {
   id: number
@@ -38,8 +39,8 @@ export default function DeployPage() {
   const [agentName, setAgentName] = useState('')
   const [description, setDescription] = useState('')
   const [subdomain, setSubdomain] = useState('')
-  const [category, setCategory] = useState('General')
-  const [tags, setTags] = useState('')
+  const [category, setCategory] = useState('Data Analysis')
+  const [tags, setTags] = useState<string[]>([])
   const [dataInput, setDataInput] = useState('')
   const [exampleInput, setExampleInput] = useState('')
   const [exampleOutput, setExampleOutput] = useState('')
@@ -250,9 +251,9 @@ export default function DeployPage() {
                   name: agentName,
                   description: description || 'No description provided',
                   subdomain,
-                  repo_owner: selectedRepo.owner.login,
-                  repo_name: selectedRepo.name,
-                  github_url: selectedRepo.html_url,
+                  repo_owner: selectedRepo?.owner.login || '',
+                  repo_name: selectedRepo?.name || '',
+                  github_url: selectedRepo?.html_url || '',
                   agent_address: blockchainData?.agentAddress,
                   app_id: Number(blockchainData?.AgentContractID),
                   agent_token: blockchainData?.agentToken,
@@ -260,7 +261,7 @@ export default function DeployPage() {
                   status: 'active',
                   runtime_status: 'active',
                   category: category,
-                  tags: tags.split(',').map(tag => tag.trim()).filter(tag => tag),
+                  tags: tags,
                   data_input: dataInput,
                   example_input: exampleInput,
                   example_output: exampleOutput
@@ -404,35 +405,46 @@ export default function DeployPage() {
                   </div>
                 </div>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                  <div>
-                    <label className="block text-neutral-300 text-sm mb-2">Category *</label>
-                    <select
-                      value={category}
-                      onChange={(e) => setCategory(e.target.value)}
-                      className="w-full bg-neutral-700 text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#63f2d2]"
-                    >
-                      <option value="General">General</option>
-                      <option value="Data Analysis">Data Analysis</option>
-                      <option value="Content Creation">Content Creation</option>
-                      <option value="Automation">Automation</option>
-                      <option value="Research">Research</option>
-                      <option value="Trading">Trading</option>
-                      <option value="Gaming">Gaming</option>
-                      <option value="Education">Education</option>
-                    </select>
+                <div className="mb-6">
+                  <label className="block text-neutral-300 text-sm mb-2">Tags (Select tags to auto-categorize)</label>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2 max-h-48 overflow-y-auto bg-neutral-700 rounded-lg p-4">
+                    {AVAILABLE_TAGS.map((tag) => (
+                      <label key={tag} className="flex items-center gap-2 text-sm text-white cursor-pointer hover:text-[#63f2d2]">
+                        <input
+                          type="checkbox"
+                          checked={tags.includes(tag)}
+                          onChange={(e) => {
+                            const newTags = e.target.checked 
+                              ? [...tags, tag]
+                              : tags.filter(t => t !== tag);
+                            setTags(newTags);
+                            const autoCategory = categorizeAgentByTags(newTags);
+                            if (autoCategory !== 'Default') setCategory(autoCategory);
+                          }}
+                          className="rounded border-neutral-500"
+                        />
+                        {tag}
+                      </label>
+                    ))}
                   </div>
-                  
-                  <div>
-                    <label className="block text-neutral-300 text-sm mb-2">Tags</label>
-                    <input
-                      type="text"
-                      value={tags}
-                      onChange={(e) => setTags(e.target.value)}
-                      className="w-full bg-neutral-700 text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#63f2d2]"
-                      placeholder="ai, automation, data (comma separated)"
-                    />
-                  </div>
+                </div>
+                
+                <div className="mb-6">
+                  <label className="block text-neutral-300 text-sm mb-2">Category (Auto-detected: {category})</label>
+                  <select
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value)}
+                    className="w-full bg-neutral-700 text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#63f2d2]"
+                  >
+                    <option value="Data Analysis">Data Analysis</option>
+                    <option value="Content Creation">Content Creation</option>
+                    <option value="Development">Development</option>
+                    <option value="Finance">Finance</option>
+                    <option value="Social Media">Social Media</option>
+                    <option value="Media">Media</option>
+                    <option value="Language">Language</option>
+                    <option value="Marketing">Marketing</option>
+                  </select>
                 </div>
                 
                 <div className="mb-6">

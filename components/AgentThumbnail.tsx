@@ -21,7 +21,7 @@ const CATEGORY_ICONS: Record<string, JSX.Element> = {
   Marketing: <svg className="w-16 h-16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"></path><path d="M22 12A10 10 0 0 0 12 2v10z"></path></svg>,
   Language: <svg className="w-16 h-16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>,
   Media: <svg className="w-16 h-16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="23 7 16 12 23 17 23 7"></polygon><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>,
-  Default: <svg className="w-16 h-16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>,
+  Default: <svg className="w-16 h-16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"></rect><circle cx="12" cy="5" r="2"></circle><path d="M12 7v4"></path><line x1="8" y1="16" x2="8" y2="16"></line><line x1="16" y1="16" x2="16" y2="16"></line></svg>,
 };
 
 function hashCode(str: string) {
@@ -39,10 +39,14 @@ export const AgentThumbnail: React.FC<AgentThumbnailProps> = ({
   category,
   className = "",
 }) => {
-  const [color1, color2] =
-    CATEGORY_GRADIENTS[category] || CATEGORY_GRADIENTS.Default;
+  const normalizedCategory = category?.trim() || "Default";
+  const categoryKey = Object.keys(CATEGORY_GRADIENTS).find(
+    key => key.toLowerCase() === normalizedCategory.toLowerCase()
+  ) || "Default";
+  
+  const [color1, color2] = CATEGORY_GRADIENTS[categoryKey];
   const rotation = hashCode(name) % 360;
-  const icon = CATEGORY_ICONS[category] || CATEGORY_ICONS.Default;
+  const icon = CATEGORY_ICONS[categoryKey];
 
   const style: React.CSSProperties = {
     background: `linear-gradient(${rotation}deg, ${color1}, ${color2})`,
