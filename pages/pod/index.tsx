@@ -57,7 +57,8 @@ export default function PodMarketplace() {
         <select
           value={sortBy}
           onChange={(e) => setSortBy(e.target.value)}
-          className="bg-neutral-900 text-white px-4 py-2 rounded-lg border border-neutral-700"
+          className="bg-neutral-900 text-white px-4 py-2 rounded-lg border border-neutral-700 focus:outline-none focus:border-mint-glow appearance-none cursor-pointer min-w-[200px]"
+          style={{ position: 'relative', zIndex: 10 }}
         >
           <option value="popular">Most Popular</option>
           <option value="newest">Newest</option>

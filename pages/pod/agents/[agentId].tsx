@@ -165,7 +165,7 @@ const signedTxns = signed.filter((txn): txn is Uint8Array => txn !== null);
         </svg>
         Back to Agents
       </Link>
-      <div className="flex gap-8">
+      <div className="flex flex-col md:flex-row gap-8">
         <div className="flex-shrink-0">
           <GenerativeThumbnail agentName={agent.name} className="h-56 w-56 rounded-2xl" />
         </div>
@@ -174,23 +174,23 @@ const signedTxns = signed.filter((txn): txn is Uint8Array => txn !== null);
             <h1 className="text-4xl font-bold text-white mb-2">{agent.name}</h1>
             <p className="text-neutral-400">by {agent.repo_owner}</p>
           </div>
-          <div className="flex gap-8">
+          <div className="flex flex-col md:flex-row gap-4 md:gap-8">
             <div>
               <p className="text-neutral-400 text-sm">Status</p>
               <p className="text-white text-2xl font-bold capitalize">{agent.status}</p>
             </div>
             <div>
               <p className="text-neutral-400 text-sm">Repository</p>
-              <p className="text-white text-lg">{agent.repo_name}</p>
+              <p className="text-white text-lg break-all">{agent.repo_name}</p>
             </div>
             <div>
               <p className="text-neutral-400 text-sm">Live URL</p>
-              <a href={`https://${agent.subdomain}.0rca.live/`} target="_blank" rel="noopener noreferrer" className="text-mint-glow text-lg hover:underline">
+              <a href={`https://${agent.subdomain}.0rca.live/`} target="_blank" rel="noopener noreferrer" className="text-mint-glow text-lg hover:underline break-all">
                 https://{agent.subdomain}.0rca.live/
               </a>
             </div>
           </div>
-          <div className="flex gap-4">
+          <div className="flex flex-col sm:flex-row gap-4">
             <button
               onClick={() => setShowModal(true)}
               className="px-6 py-3 border-2 border-mint-glow text-mint-glow rounded-lg font-semibold hover:bg-mint-glow/10"
