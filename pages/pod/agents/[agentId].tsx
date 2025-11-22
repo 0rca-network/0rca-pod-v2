@@ -3,6 +3,7 @@ import { useRouter } from 'next/router';
 import Link from 'next/link';
 import { useWallet } from '@txnlab/use-wallet-react';
 import algosdk from 'algosdk';
+import { NextSeo, ArticleJsonLd } from 'next-seo';
 import { GenerativeThumbnail } from '@/components/GenerativeThumbnail';
 import { DemoInputModal } from '@/components/DemoInputModal';
 
@@ -158,7 +159,21 @@ const signedTxns = signed.filter((txn): txn is Uint8Array => txn !== null);
   };
 
   return (
-    <div className="space-y-8">
+    <>
+      <NextSeo
+        title={agent.name}
+        description={agent.description || `${agent.name} - AI Agent by ${agent.repo_owner}`}
+      />
+      <ArticleJsonLd
+        type="TechArticle"
+        url={`https://0rca.live/pod/agents/${agentId}`}
+        headline={agent.name}
+        datePublished={agent.created_at}
+        author={agent.repo_owner}
+        description={agent.description || `${agent.name} - AI Agent by ${agent.repo_owner}`}
+        image={`https://0rca.live/api/og?name=${encodeURIComponent(agent.name)}`}
+      />
+      <div className="space-y-8">
       <Link href="/pod" className="inline-flex items-center gap-2 text-neutral-400 hover:text-white transition-colors text-sm">
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -258,6 +273,7 @@ const signedTxns = signed.filter((txn): txn is Uint8Array => txn !== null);
           onSubmit={handleDemo}
         />
       )}
-    </div>
+      </div>
+    </>
   );
 }

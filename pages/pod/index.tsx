@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
+import { NextSeo } from 'next-seo';
 import { AgentCard } from '@/components/AgentCard';
 
 export default function PodMarketplace() {
@@ -42,7 +43,12 @@ export default function PodMarketplace() {
   });
 
   return (
-    <div className="space-y-6">
+    <>
+      <NextSeo
+        title={category ? String(category).split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') : 'Orca Pod'}
+        description={category ? `Browse ${String(category).split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')} agents` : 'Discover and hire AI agents for your tasks'}
+      />
+      <div className="space-y-6">
       <div>
         <h1 className="text-4xl font-bold text-white mb-2">
           {category ? String(category).split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') : 'Orca Pod'}
@@ -84,6 +90,7 @@ export default function PodMarketplace() {
           ))}
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 }
