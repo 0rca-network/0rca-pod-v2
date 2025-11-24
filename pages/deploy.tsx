@@ -28,8 +28,8 @@ interface Repository {
 export default function DeployPage() {
   const { activeAddress, transactionSigner } = useWallet()
   const algorand = AlgorandClient.testNet()
-  const DEFAULT_APP_ID =  749655317
-  
+  const DEFAULT_APP_ID = 749655317
+
   const [mounted, setMounted] = useState(false)
   const [user, setUser] = useState<User | null>(null)
   const [repos, setRepos] = useState<Repository[]>([])
@@ -45,7 +45,7 @@ export default function DeployPage() {
   const [exampleInput, setExampleInput] = useState('')
   const [exampleOutput, setExampleOutput] = useState('')
   const [deploymentStatus, setDeploymentStatus] = useState<'idle' | 'blockchain' | 'waiting-container' | 'deploying' | 'success' | 'error'>('idle')
-  const [blockchainData, setBlockchainData] = useState<{AgentContractID: any, agentAddress: string, agentToken: string} | null>(null)
+  const [blockchainData, setBlockchainData] = useState<{ AgentContractID: any, agentAddress: string, agentToken: string } | null>(null)
   const [containerUrl, setContainerUrl] = useState('')
   const [deploymentLogs, setDeploymentLogs] = useState<string[]>([])
   const [error, setError] = useState('')
@@ -89,10 +89,10 @@ export default function DeployPage() {
 
   const fetchRepos = async () => {
     if (reposFetched) return
-    
+
     const { data: { session } } = await supabase.auth.getSession()
     console.log('Session:', session?.user?.email, 'Token exists:', !!session?.provider_token)
-    
+
     if (!session?.provider_token) {
       console.log('No provider token found - clearing session')
       await supabase.auth.signOut()
@@ -102,7 +102,7 @@ export default function DeployPage() {
       setReposFetched(false)
       return
     }
-    
+
     setNeedsReauth(false)
 
     setLoading(true)
@@ -132,7 +132,7 @@ export default function DeployPage() {
 
     try {
       setDeploymentLogs(prev => [...prev, '🔗 Creating agent on Algorand blockchain...'])
-      
+
       const appClient = new AgentsContractClient({
         appId: BigInt(DEFAULT_APP_ID),
         defaultSender: activeAddress,
@@ -154,13 +154,13 @@ export default function DeployPage() {
 
       const AgentContractID = result.return
       const agentAddress = getApplicationAddress(Number(AgentContractID)).toString()
-      
+
       // Generate SHA256 hash for agent token
       const tokenData = `${AgentContractID}-${agentAddress}-${Date.now()}-${Math.random()}`
       const agentToken = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(tokenData))
         .then(hashBuffer => Array.from(new Uint8Array(hashBuffer))
           .map(b => b.toString(16).padStart(2, '0')).join(''))
-      
+
       setDeploymentLogs(prev => [...prev, '✅ Agent created on blockchain successfully!'])
       return { AgentContractID, agentAddress, agentToken }
     } catch (error) {
@@ -208,9 +208,9 @@ export default function DeployPage() {
         app_name: subdomain,
         port: 8000
       }
-      
+
       console.log('Sending deploy payload:', deployPayload)
-      
+
       // Deploy via API
       const deployResponse = await fetch('/api/deploy', {
         method: 'POST',
@@ -232,16 +232,16 @@ export default function DeployPage() {
         try {
           const statusResponse = await fetch(`/api/status/${deployResult.job_id}`)
           const status = await statusResponse.json()
-          
+
           setDeploymentLogs(prev => [...prev, `📊 Status: ${status.status} - ${status.message}`])
-          
+
           if (status.status === 'completed') {
             // Create agent record
             const { data: { session } } = await supabase.auth.getSession()
             console.log('Session user:', session?.user?.id)
             const agentResponse = await fetch('/api/agents', {
               method: 'POST',
-              headers: { 
+              headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${session?.access_token}`,
                 'apikey': process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
@@ -297,15 +297,15 @@ export default function DeployPage() {
   }
 
   let content
-  
+
   if (!user || needsReauth) {
     content = (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-4xl font-bold text-white mb-4">Deploy Your Repository</h1>
           <p className="text-neutral-400 mb-8">
-            {needsReauth 
-              ? 'Your GitHub session has expired. Please sign in again to access your repositories.' 
+            {needsReauth
+              ? 'Your GitHub session has expired. Please sign in again to access your repositories.'
               : 'Sign in with GitHub to deploy your repositories'
             }
           </p>
@@ -328,7 +328,7 @@ export default function DeployPage() {
         >
           ← Back to repositories
         </button>
-        
+
         <div className="bg-neutral-800 rounded-2xl p-8">
           <div className="flex items-start justify-between mb-6">
             <div>
@@ -377,7 +377,7 @@ export default function DeployPage() {
             <div className="space-y-6">
               <div className="border-t border-neutral-700 pt-6">
                 <h2 className="text-2xl font-bold text-white mb-4">Configure Your Agent</h2>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                   <div>
                     <label className="block text-neutral-300 text-sm mb-2">Agent Name *</label>
@@ -389,7 +389,7 @@ export default function DeployPage() {
                       placeholder="My AI Agent"
                     />
                   </div>
-                  
+
                   <div>
                     <label className="block text-neutral-300 text-sm mb-2">Custom Subdomain *</label>
                     <div className="flex">
@@ -404,7 +404,7 @@ export default function DeployPage() {
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="mb-6">
                   <label className="block text-neutral-300 text-sm mb-2">Tags (Select tags to auto-categorize)</label>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-2 max-h-48 overflow-y-auto bg-neutral-700 rounded-lg p-4">
@@ -414,7 +414,7 @@ export default function DeployPage() {
                           type="checkbox"
                           checked={tags.includes(tag)}
                           onChange={(e) => {
-                            const newTags = e.target.checked 
+                            const newTags = e.target.checked
                               ? [...tags, tag]
                               : tags.filter(t => t !== tag);
                             setTags(newTags);
@@ -428,7 +428,7 @@ export default function DeployPage() {
                     ))}
                   </div>
                 </div>
-                
+
                 <div className="mb-6">
                   <label className="block text-neutral-300 text-sm mb-2">Category (Auto-detected: {category})</label>
                   <select
@@ -446,7 +446,7 @@ export default function DeployPage() {
                     <option value="Marketing">Marketing</option>
                   </select>
                 </div>
-                
+
                 <div className="mb-6">
                   <label className="block text-neutral-300 text-sm mb-2">Description</label>
                   <textarea
@@ -480,7 +480,7 @@ export default function DeployPage() {
                       placeholder='{"text": "Hello world", "language": "en"}'
                     />
                   </div>
-                  
+
                   <div>
                     <label className="block text-neutral-300 text-sm mb-2">Example Output</label>
                     <textarea
@@ -494,11 +494,11 @@ export default function DeployPage() {
                 </div>
 
 
-                
+
                 {error && (
                   <div className="text-red-400 text-sm mb-4">{error}</div>
                 )}
-                
+
                 {mounted && !activeAddress && (
                   <div className="bg-yellow-900 border border-yellow-600 rounded-lg p-4 mb-4">
                     <div className="text-yellow-400 font-semibold mb-2">⚠️ Wallet Required</div>
@@ -507,7 +507,7 @@ export default function DeployPage() {
                     </div>
                   </div>
                 )}
-                
+
                 {deploymentStatus === 'waiting-container' && blockchainData && (
                   <div className="bg-blue-900 border border-blue-600 rounded-lg p-4 mb-4">
                     <div className="text-blue-400 font-semibold mb-2">📝 Step 2: Add Blockchain Data to Your Project</div>
@@ -533,7 +533,7 @@ export default function DeployPage() {
                     <p className="text-neutral-400 text-xs mb-3">Enter the full Docker image path from GitHub Container Registry</p>
                   </div>
                 )}
-                
+
                 <div className="flex gap-3">
                   <button
                     onClick={() => setShowDeployForm(false)}
@@ -562,30 +562,29 @@ export default function DeployPage() {
                       disabled
                       className="flex-1 bg-neutral-500 text-neutral-300 py-3 rounded-lg font-semibold"
                     >
-                      {deploymentStatus === 'blockchain' ? 'Creating on Blockchain...' : 
-                       deploymentStatus === 'deploying' ? 'Deploying...' : 'Processing...'}
+                      {deploymentStatus === 'blockchain' ? 'Creating on Blockchain...' :
+                        deploymentStatus === 'deploying' ? 'Deploying...' : 'Processing...'}
                     </button>
                   )}
                 </div>
               </div>
-              
+
               {deploymentStatus !== 'idle' && (
                 <div className="border-t border-neutral-700 pt-6">
                   <div className="flex items-center gap-2 mb-4">
-                    <div className={`w-3 h-3 rounded-full ${
-                      deploymentStatus === 'blockchain' ? 'bg-blue-500 animate-pulse' :
-                      deploymentStatus === 'waiting-container' ? 'bg-orange-500' :
-                      deploymentStatus === 'deploying' ? 'bg-yellow-500 animate-pulse' : 
-                      deploymentStatus === 'success' ? 'bg-green-500' : 'bg-red-500'
-                    }`} />
+                    <div className={`w-3 h-3 rounded-full ${deploymentStatus === 'blockchain' ? 'bg-blue-500 animate-pulse' :
+                        deploymentStatus === 'waiting-container' ? 'bg-orange-500' :
+                          deploymentStatus === 'deploying' ? 'bg-yellow-500 animate-pulse' :
+                            deploymentStatus === 'success' ? 'bg-green-500' : 'bg-red-500'
+                      }`} />
                     <h3 className="text-white font-semibold">
                       {deploymentStatus === 'blockchain' ? 'Step 1: Creating on Blockchain...' :
-                       deploymentStatus === 'waiting-container' ? 'Step 2: Waiting for Container' :
-                       deploymentStatus === 'deploying' ? 'Step 3: Deploying...' : 
-                       deploymentStatus === 'success' ? 'Deployment Successful' : 'Deployment Failed'}
+                        deploymentStatus === 'waiting-container' ? 'Step 2: Waiting for Container' :
+                          deploymentStatus === 'deploying' ? 'Step 3: Deploying...' :
+                            deploymentStatus === 'success' ? 'Deployment Successful' : 'Deployment Failed'}
                     </h3>
                   </div>
-                  
+
                   <div className="bg-black rounded-lg p-4 mb-4">
                     <div className="text-green-400 font-mono text-sm space-y-1">
                       {deploymentLogs.map((log, index) => (
@@ -593,7 +592,7 @@ export default function DeployPage() {
                       ))}
                     </div>
                   </div>
-                  
+
                   {deploymentStatus === 'success' && (
                     <div className="bg-neutral-700 rounded-lg p-4">
                       <h4 className="text-white font-semibold mb-2">🎉 Deployment Complete!</h4>
@@ -604,7 +603,7 @@ export default function DeployPage() {
                       </div>
                       <div className="bg-green-900 border border-green-600 rounded-lg p-4">
                         <div className="text-green-400 font-semibold mb-2">🚀 Your agent is now live!</div>
-                        <a 
+                        <a
                           href={`https://${subdomain}.0rca.live`}
                           target="_blank"
                           rel="noopener noreferrer"
@@ -636,7 +635,7 @@ export default function DeployPage() {
           <div className="text-center text-neutral-400">
             <p>No repositories found.</p>
             <p className="text-sm mt-2">Make sure you're signed in with GitHub and have repositories.</p>
-            <button 
+            <button
               onClick={fetchRepos}
               className="mt-4 bg-neutral-700 text-white px-4 py-2 rounded hover:bg-neutral-600"
             >

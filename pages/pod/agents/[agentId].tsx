@@ -5,6 +5,7 @@ import { useWallet } from '@txnlab/use-wallet-react';
 import algosdk from 'algosdk';
 import { GenerativeThumbnail } from '@/components/GenerativeThumbnail';
 import { DemoInputModal } from '@/components/DemoInputModal';
+import { HiringProgressModal } from '@/components/HiringProgressModal';
 
 export default function AgentDetail() {
   const router = useRouter();
@@ -12,7 +13,24 @@ export default function AgentDetail() {
   const [showModal, setShowModal] = useState(false);
   const [agent, setAgent] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [hiring, setHiring] = useState(false);
+  const [hiringStage, setHiringStage] = useState('');
+  const [hiringError, setHiringError] = useState('');
+  const [stages, setStages] = useState<Array<{ id: string; label: string; status: 'pending' | 'active' | 'complete' | 'error' }>>([
+    { id: 'create', label: 'Creating job...', status: 'pending' },
+    { id: 'sign', label: 'Awaiting wallet signature...', status: 'pending' },
+    { id: 'send', label: 'Sending transaction...', status: 'pending' },
+    { id: 'confirm', label: 'Confirming payment...', status: 'pending' },
+    { id: 'verify', label: 'Verifying payment...', status: 'pending' },
+    { id: 'poll', label: 'Processing job...', status: 'pending' },
+    { id: 'complete', label: 'Complete!', status: 'pending' }
+  ]);
   const { activeAccount, signTransactions, algodClient } = useWallet();
+
+  const updateStage = (stageId: string, status: 'active' | 'complete' | 'error') => {
+    setStages(prev => prev.map(s => s.id === stageId ? { ...s, status } : s));
+    if (status === 'active') setHiringStage(stageId);
+  };
 
   useEffect(() => {
     if (agentId) {
@@ -37,7 +55,12 @@ export default function AgentDetail() {
   const handleHire = async () => {
     if (!activeAccount || !agent?.subdomain) return;
     
+    setHiring(true);
+    setHiringError('');
+    setStages(prev => prev.map(s => ({ ...s, status: 'pending' })));
+    
     try {
+      updateStage('create', 'active');
       console.log('Starting job creation...');
       
       // Create job on agent
@@ -54,6 +77,7 @@ export default function AgentDetail() {
       
       const jobData = await jobResponse.json();
       console.log('Job created:', jobData);
+      updateStage('create', 'complete');
       
       if (!jobData.unsigned_group_txns || jobData.unsigned_group_txns.length === 0) {
         throw new Error('No unsigned transaction received');
@@ -87,26 +111,29 @@ export default function AgentDetail() {
       }
       console.log('Clean transactions for signing:', cleanTxns);
       
+      updateStage('sign', 'active');
       const signed = await signTransactions(cleanTxns);
       console.log('Signed transaction:', signed);
-      // Sign transactions
-      console.log('Signing transactions...');
+      updateStage('sign', 'complete');
+      
 const signedTxns = signed.filter((txn): txn is Uint8Array => txn !== null);
       console.log('Signed transactions:', signedTxns);
       if (signedTxns.length === 0) {
   throw new Error("No valid signed transactions returned.");
 }
-      // Send transaction group
+      updateStage('send', 'active');
       console.log('Sending transaction group...');
       const { txid } = await algodClient.sendRawTransaction(signedTxns).do();
       console.log('Transaction ID:', txid);
+      updateStage('send', 'complete');
       
-      // Wait for confirmation
+      updateStage('confirm', 'active');
       console.log('Waiting for confirmation...');
       const result = await algosdk.waitForConfirmation(algodClient, txid, 4);
       console.log(`Transaction confirmed at round ${result['confirmedRound']}`);
+      updateStage('confirm', 'complete');
       
-      // Submit payment verification
+      updateStage('verify', 'active');
       console.log('Submitting payment verification...');
       const paymentResponse = await fetch(`https://${agent.subdomain}.0rca.live/submit_payment`, {
         method: 'POST',
@@ -121,11 +148,27 @@ const signedTxns = signed.filter((txn): txn is Uint8Array => txn !== null);
       
       const paymentData = await paymentResponse.json();
       console.log('Payment verification response:', paymentData);
+      updateStage('verify', 'complete');
       
       if (paymentData.status === 'success') {
-        console.log('Payment verified, polling for job results...');
+        updateStage('poll', 'active');
+        console.log('Payment verified, saving to database...');
         
-        // Poll for job results
+        // Save to Supabase
+        await fetch('/api/agent/access', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            wallet_address: activeAccount.address,
+            job_id: jobData.job_id,
+            agent_id: agent.id,
+            access_token: paymentData.access_token,
+            job_input_hash: jobData.job_input_hash
+          })
+        });
+        
+        console.log('Saved to database, polling for job results...');
+        
         const pollJobResult = async () => {
           const resultResponse = await fetch(`https://${agent.subdomain}.0rca.live/job/${jobData.job_id}?access_token=${paymentData.access_token}`);
           const resultData = await resultResponse.json();
@@ -134,26 +177,40 @@ const signedTxns = signed.filter((txn): txn is Uint8Array => txn !== null);
           if (resultData.status === 'succeeded') {
             console.log('Job completed successfully!');
             console.log('Job output:', resultData.output);
-            alert(`Job completed successfully!\nJob ID: ${jobData.job_id}\nOutput: ${resultData.output}`);
+            
+            await fetch('/api/agent/access', {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                job_id: jobData.job_id,
+                job_output: resultData.output
+              })
+            });
+            
+            updateStage('poll', 'complete');
+            updateStage('complete', 'complete');
           } else if (resultData.status === 'failed') {
             console.log('Job failed');
-            alert(`Job failed: ${jobData.job_id}`);
+            updateStage('poll', 'error');
+            setHiringError('Job execution failed');
           } else {
             console.log(`Job status: ${resultData.status}, polling again in 3 seconds...`);
             setTimeout(pollJobResult, 3000);
           }
         };
         
-        // Start polling
         setTimeout(pollJobResult, 2000);
-        alert(`Job started successfully! Job ID: ${jobData.job_id}\nPolling for results...`);
       } else {
         throw new Error(paymentData.message || 'Payment verification failed');
       }
       
     } catch (error) {
       console.error('Error hiring agent:', error);
-      alert('Failed to hire agent: ' + error);
+      const errorStage = stages.find(s => s.status === 'active');
+      if (errorStage) {
+        updateStage(errorStage.id, 'error');
+      }
+      setHiringError(error instanceof Error ? error.message : 'Failed to hire agent');
     }
   };
 
@@ -200,14 +257,14 @@ const signedTxns = signed.filter((txn): txn is Uint8Array => txn !== null);
             <button 
               onClick={handleHire}
               className={`px-6 py-3 rounded-lg font-semibold transition-all ${
-                activeAccount 
+                activeAccount && !hiring
                   ? 'bg-mint-glow text-black hover:opacity-90' 
                   : 'bg-neutral-700 text-neutral-400 cursor-not-allowed'
               }`}
-              disabled={!activeAccount}
-              title={!activeAccount ? 'Connect wallet to hire agent' : ''}
+              disabled={!activeAccount || hiring}
+              title={!activeAccount ? 'Connect wallet to hire agent' : hiring ? 'Hiring in progress...' : ''}
             >
-              {activeAccount ? 'Hire Agent' : 'Connect Wallet to Hire'}
+              {hiring ? 'Hiring...' : activeAccount ? 'Hire Agent' : 'Connect Wallet to Hire'}
             </button>
           </div>
         </div>
@@ -258,6 +315,17 @@ const signedTxns = signed.filter((txn): txn is Uint8Array => txn !== null);
           onSubmit={handleDemo}
         />
       )}
+
+      <HiringProgressModal
+        isOpen={hiring}
+        currentStage={hiringStage}
+        stages={stages}
+        error={hiringError}
+        onClose={hiringError || stages.every(s => s.status === 'complete') ? () => {
+          setHiring(false);
+          if (!hiringError) router.push('/job');
+        } : undefined}
+      />
     </div>
   );
 }

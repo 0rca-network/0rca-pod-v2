@@ -2,38 +2,53 @@ import { NextApiRequest, NextApiResponse } from 'next'
 import { createClient } from '@supabase/supabase-js'
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  )
+
+  if (req.method === 'PUT') {
+    const { job_id, job_output } = req.body
+    
+    if (!job_id) {
+      return res.status(400).json({ error: 'Missing job_id' })
+    }
+
+    const { error } = await supabase
+      .from('access_tokens')
+      .update({ job_output })
+      .eq('job_id', job_id)
+
+    if (error) {
+      return res.status(400).json({ error: error.message })
+    }
+
+    return res.status(200).json({ success: true })
+  }
+
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
   try {
-    const agentToken = req.headers['x-agent-token']
-    
-    if (!agentToken) {
-      return res.status(401).json({ error: 'X-Agent-Token header required' })
-    }
+    const { wallet_address, job_id, agent_id, access_token, job_input_hash, job_output } = req.body
 
-    const { user_id, wallet_address, job_id, agent_id, access_token, job_input_hash, job_output } = req.body
-
-    if (!user_id || !wallet_address || !job_id || !agent_id || !access_token) {
+    if (!wallet_address || !job_id || !agent_id || !access_token) {
       return res.status(400).json({ error: 'Missing required fields' })
     }
 
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    )
-
-    // Verify agent token
-    const { data: agent, error: agentError } = await supabase
-      .from('agents')
-      .select('id, agent_token')
-      .eq('id', agent_id)
-      .eq('agent_token', agentToken)
+    // Look up user_id from wallet address (optional)
+    let user_id = null
+    const { data: existingToken } = await supabase
+      .from('access_tokens')
+      .select('user_id')
+      .eq('wallet_address', wallet_address)
+      .not('user_id', 'is', null)
+      .limit(1)
       .single()
-
-    if (agentError || !agent) {
-      return res.status(401).json({ error: 'Invalid agent token' })
+    
+    if (existingToken?.user_id) {
+      user_id = existingToken.user_id
     }
 
     // Insert access token record
