@@ -7,7 +7,7 @@ export function Footer() {
         <div className="flex flex-col md:flex-row items-center justify-between gap-3 mb-3">
           <h3 className="text-base sm:text-lg text-white text-center md:text-left">Join the Autonomous Future.</h3>
           <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4 font-mono text-xs text-white">
-            <Link href="/docs" className="hover:text-[#63f2d2] transition-colors">
+            <Link href="https://docs.0rca.network/" className="hover:text-[#63f2d2] transition-colors">
               Docs
             </Link>
             <Link href="https://pod.0rca.network" className="hover:text-[#63f2d2] transition-colors">
@@ -16,10 +16,10 @@ export function Footer() {
             <a href="https://forum.0rca.network" className="hover:text-[#63f2d2] transition-colors">
               Forum
             </a>
-            <Link href="/about" className="hover:text-[#63f2d2] transition-colors">
+            <Link href="https://www.0rca.network/about" className="hover:text-[#63f2d2] transition-colors">
               About
             </Link>
-            <Link href="/whitepaper" className="hover:text-[#63f2d2] transition-colors">
+            <Link href="https://www.0rca.network/whitepaper" className="hover:text-[#63f2d2] transition-colors">
               Whitepaper
             </Link>
           </div>

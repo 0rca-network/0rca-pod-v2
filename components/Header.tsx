@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import Link from 'next/link';
-import Image from 'next/image';
 import { ConnectWalletButton } from './ConnectWalletButton';
 import { supabase } from '@/lib/supabase';
 import { User } from '@supabase/supabase-js';
+import { Search, Menu, X } from 'lucide-react';
 
 interface HeaderProps {
   onToggleSidebar: () => void;
+  isSidebarOpen: boolean;
 }
 
-export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
+export const Header: React.FC<HeaderProps> = ({ onToggleSidebar, isSidebarOpen }) => {
   const [search, setSearch] = useState('');
   const [showSearch, setShowSearch] = useState(false);
   const [user, setUser] = useState<User | null>(null);
@@ -26,74 +26,57 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
     return () => subscription.unsubscribe();
   }, []);
 
-  const signInWithGitHub = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'github',
-      options: {
-        scopes: 'repo read:user',
-        redirectTo: window.location.origin + window.location.pathname
-      }
-    });
-    if (error) console.error('Error:', error);
-  };
-
-  const signOut = async () => {
-    await supabase.auth.signOut();
-  };
-
   return (
-    <header className="relative bg-black/50 backdrop-blur-lg border-b border-neutral-800 px-4 md:px-6 py-4 z-40">
-      <div className="flex items-center justify-between gap-2">
-        <button onClick={onToggleSidebar} className="text-white hover:text-[#63f2d2] transition-colors p-2">
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-          </svg>
+    <header className="sticky top-0 z-40 w-full">
+      <div className="absolute inset-0 bg-deep-midnight/70 backdrop-blur-md border-b border-glass-border" />
+      <div className="relative px-4 md:px-8 py-4 flex items-center justify-between gap-4">
+        <button
+          onClick={onToggleSidebar}
+          className="text-neutral-400 hover:text-mint-glow transition-colors p-2 rounded-lg hover:bg-white/5"
+        >
+          {isSidebarOpen ? <X size={24} /> : <Menu size={24} />}
         </button>
-        
-        <div className="hidden md:flex flex-1 max-w-xl">
+
+        <div className="hidden md:flex flex-1 max-w-xl relative group">
+          <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-neutral-500 group-focus-within:text-mint-glow transition-colors">
+            <Search size={18} />
+          </div>
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search agents..."
-            className="w-full px-4 py-2 bg-neutral-900 text-white rounded-lg border border-neutral-700 focus:border-[#63f2d2] focus:outline-none"
+            className="w-full pl-10 pr-4 py-2.5 bg-slate-blue/50 text-white rounded-xl border border-glass-border focus:border-mint-glow/50 focus:ring-1 focus:ring-mint-glow/50 focus:outline-none transition-all placeholder:text-neutral-600"
           />
         </div>
-        
-        <div className="flex items-center gap-2">
-          <button onClick={() => setShowSearch(!showSearch)} className="md:hidden text-white hover:text-[#63f2d2] transition-colors p-2">
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
+
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowSearch(!showSearch)}
+            className="md:hidden text-neutral-400 hover:text-mint-glow transition-colors p-2"
+          >
+            <Search size={20} />
           </button>
-          {user ? (
-            <button onClick={signOut} className="flex items-center gap-2 px-3 py-2 text-white hover:text-[#63f2d2] transition-colors rounded-lg hover:bg-white/5">
-              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
-              </svg>
-              <span className="hidden md:inline">Sign Out</span>
-            </button>
-          ) : (
-            <button onClick={signInWithGitHub} className="flex items-center gap-2 px-3 py-2 text-white hover:text-[#63f2d2] transition-colors rounded-lg hover:bg-white/5">
-              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
-              </svg>
-              <span className="hidden md:inline">Sign in with GitHub</span>
-            </button>
-          )}
+
           <ConnectWalletButton />
         </div>
       </div>
+
       {showSearch && (
-        <div className="md:hidden mt-3">
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search agents..."
-            className="w-full px-4 py-2 bg-neutral-900 text-white rounded-lg border border-neutral-700 focus:border-[#63f2d2] focus:outline-none"
-            autoFocus
-          />
+        <div className="md:hidden px-4 pb-4 relative z-40 bg-deep-midnight/90 backdrop-blur-md border-b border-glass-border">
+          <div className="relative">
+            <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-neutral-500">
+              <Search size={18} />
+            </div>
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search agents..."
+              className="w-full pl-10 pr-4 py-2 bg-slate-blue/50 text-white rounded-xl border border-glass-border focus:border-mint-glow focus:outline-none"
+              autoFocus
+            />
+          </div>
         </div>
       )}
     </header>

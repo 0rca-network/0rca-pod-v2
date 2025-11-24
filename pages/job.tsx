@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { User } from '@supabase/supabase-js';
+import { useWallet } from '@txnlab/use-wallet-react';
+import Link from 'next/link';
 
 interface Job {
   id: string;
@@ -18,53 +20,78 @@ interface Job {
   };
 }
 
+interface Workflow {
+  workflow_id: string;
+  user_message: string;
+  wallet_address: string;
+  status: string;
+  current_step: number;
+  plan: {
+    steps: Array<{ step_number: number; agent_name: string; description: string }>;
+  };
+  created_at: string;
+  step_results?: Array<{
+    step_number: number;
+    agent_name: string;
+    status: string;
+    output?: string;
+  }>;
+}
+
 export default function JobsPage() {
   const [user, setUser] = useState<User | null>(null);
+  const { activeAccount } = useWallet();
   const [jobs, setJobs] = useState<Job[]>([]);
+  const [workflows, setWorkflows] = useState<Workflow[]>([]);
+  const [filter, setFilter] = useState<'all' | 'jobs' | 'workflows'>('all');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchJobs(session.user.id);
-      } else {
-        setLoading(false);
-      }
-    });
+    if (activeAccount) {
+      fetchData(activeAccount.address);
+    } else {
+      setLoading(false);
+    }
+  }, [activeAccount]);
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchJobs(session.user.id);
-      } else {
-        setJobs([]);
-        setLoading(false);
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  const fetchJobs = async (userId: string) => {
+  const fetchData = async (walletAddress: string) => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('access_tokens')
-        .select(`
-          *,
-          agents (
-            name,
-            subdomain
-          )
-        `)
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false });
+      const [jobsRes, workflowsRes] = await Promise.all([
+        supabase
+          .from('access_tokens')
+          .select(`
+            *,
+            agents (
+              name,
+              subdomain
+            )
+          `)
+          .eq('wallet_address', walletAddress)
+          .order('created_at', { ascending: false }),
+        
+        supabase
+          .from('workflows')
+          .select(`
+            *,
+            step_results (
+              step_number,
+              agent_name,
+              status,
+              output
+            )
+          `)
+          .eq('wallet_address', walletAddress)
+          .order('created_at', { ascending: false })
+      ]);
 
-      if (error) throw error;
-      setJobs(data || []);
+      if (jobsRes.error) throw jobsRes.error;
+      if (workflowsRes.error) throw workflowsRes.error;
+      
+      setJobs(jobsRes.data || []);
+      setWorkflows(workflowsRes.data || []);
     } catch (error) {
-      console.error('Error fetching jobs:', error);
+      console.error('Error fetching data:', error);
     }
     setLoading(false);
   };
@@ -80,28 +107,58 @@ export default function JobsPage() {
     if (error) console.error('Error:', error);
   };
 
-  if (!user) {
+  if (!activeAccount) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-4xl font-bold text-white mb-4">Your Jobs</h1>
-          <p className="text-neutral-400 mb-8">Sign in with GitHub using the button in the header to view your job history</p>
-
+          <p className="text-neutral-400 mb-8">Connect your wallet to view your job history</p>
         </div>
       </div>
     );
   }
 
+  const filteredJobs = filter === 'workflows' ? [] : jobs;
+  const filteredWorkflows = filter === 'jobs' ? [] : workflows;
+  const hasData = filteredJobs.length > 0 || filteredWorkflows.length > 0;
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-4xl font-bold text-white mb-2">Your Jobs</h1>
-        <p className="text-neutral-400">Track your agent job executions and results</p>
+        <p className="text-neutral-400">Track your agent job executions and workflow results</p>
+      </div>
+
+      <div className="flex gap-2">
+        <button
+          onClick={() => setFilter('all')}
+          className={`px-4 py-2 rounded-lg font-semibold transition-colors ${
+            filter === 'all' ? 'bg-mint-glow text-black' : 'bg-neutral-800 text-neutral-300 hover:bg-neutral-700'
+          }`}
+        >
+          All
+        </button>
+        <button
+          onClick={() => setFilter('jobs')}
+          className={`px-4 py-2 rounded-lg font-semibold transition-colors ${
+            filter === 'jobs' ? 'bg-mint-glow text-black' : 'bg-neutral-800 text-neutral-300 hover:bg-neutral-700'
+          }`}
+        >
+          Agent Jobs ({jobs.length})
+        </button>
+        <button
+          onClick={() => setFilter('workflows')}
+          className={`px-4 py-2 rounded-lg font-semibold transition-colors ${
+            filter === 'workflows' ? 'bg-mint-glow text-black' : 'bg-neutral-800 text-neutral-300 hover:bg-neutral-700'
+          }`}
+        >
+          Workflows ({workflows.length})
+        </button>
       </div>
 
       {loading ? (
-        <div className="text-center text-neutral-400 py-12">Loading jobs...</div>
-      ) : jobs.length === 0 ? (
+        <div className="text-center text-neutral-400 py-12">Loading...</div>
+      ) : !hasData ? (
         <div className="text-center py-12">
           <div className="bg-neutral-900/50 backdrop-blur-lg rounded-2xl p-8">
             <svg className="w-16 h-16 text-neutral-600 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -110,16 +167,73 @@ export default function JobsPage() {
               <line x1="12" y1="17" x2="12" y2="21"></line>
             </svg>
             <h3 className="text-xl font-semibold text-white mb-2">No Jobs Yet</h3>
-            <p className="text-neutral-400 mb-4">You haven't executed any agent jobs yet.</p>
-            <a href="/pod" className="inline-block bg-mint-glow text-black px-6 py-2 rounded-lg font-semibold hover:opacity-90 transition-opacity">
-              Browse Agents
-            </a>
+            <p className="text-neutral-400 mb-4">You haven't executed any jobs or workflows yet.</p>
+            <div className="flex gap-3 justify-center">
+              <a href="/pod" className="inline-block bg-mint-glow text-black px-6 py-2 rounded-lg font-semibold hover:opacity-90 transition-opacity">
+                Browse Agents
+              </a>
+              <a href="/orchestrator" className="inline-block bg-neutral-700 text-white px-6 py-2 rounded-lg font-semibold hover:bg-neutral-600 transition-colors">
+                Create Workflow
+              </a>
+            </div>
           </div>
         </div>
       ) : (
         <div className="grid gap-4">
-          {jobs.map((job) => (
-            <div key={job.id} className="bg-neutral-900/50 backdrop-blur-lg rounded-2xl p-6">
+          {filteredWorkflows.map((workflow) => (
+            <div key={workflow.workflow_id} className="bg-neutral-900/50 backdrop-blur-lg rounded-2xl p-6 border-l-4 border-mint-glow">
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className="px-3 py-1 bg-mint-glow/20 text-mint-glow rounded-lg text-xs font-semibold">WORKFLOW</span>
+                    <span className={`px-3 py-1 rounded-lg text-xs font-semibold ${
+                      workflow.status === 'completed' ? 'bg-green-500/20 text-green-400' :
+                      workflow.status === 'running' ? 'bg-blue-500/20 text-blue-400' :
+                      workflow.status === 'failed' ? 'bg-red-500/20 text-red-400' :
+                      'bg-neutral-700 text-neutral-300'
+                    }`}>
+                      {workflow.status.toUpperCase()}
+                    </span>
+                  </div>
+                  <h3 className="text-lg font-semibold text-white mb-2">{workflow.user_message}</h3>
+                  <p className="text-neutral-400 text-sm mb-3">
+                    {workflow.plan.steps.length} steps • Step {workflow.current_step} of {workflow.plan.steps.length}
+                  </p>
+                  <div className="space-y-2">
+                    {workflow.step_results?.map((step) => (
+                      <div key={step.step_number} className="flex items-center gap-2 text-sm">
+                        <span className={`w-2 h-2 rounded-full ${
+                          step.status === 'succeeded' ? 'bg-green-400' :
+                          step.status === 'running' ? 'bg-blue-400 animate-pulse' :
+                          step.status === 'failed' ? 'bg-red-400' :
+                          'bg-neutral-600'
+                        }`}></span>
+                        <span className="text-neutral-400">Step {step.step_number}:</span>
+                        <span className="text-white">{step.agent_name}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-neutral-400 text-sm">
+                    {new Date(workflow.created_at).toLocaleDateString()}
+                  </div>
+                  <div className="text-neutral-500 text-xs">
+                    {new Date(workflow.created_at).toLocaleTimeString()}
+                  </div>
+                  <Link
+                    href={`/workflow/${workflow.workflow_id}`}
+                    className="mt-2 inline-block text-mint-glow hover:underline text-sm font-semibold"
+                  >
+                    View Details →
+                  </Link>
+                </div>
+              </div>
+            </div>
+          ))}
+          
+          {filteredJobs.map((job) => (
+            <div key={job.id} className="bg-neutral-900/50 backdrop-blur-lg rounded-2xl p-6 border-l-4 border-blue-500">
               <div className="flex items-start justify-between mb-4">
                 <div>
                   <h3 className="text-lg font-semibold text-white mb-1">Job {job.job_id}</h3>
@@ -178,7 +292,13 @@ export default function JobsPage() {
                 <div>
                   <p className="text-neutral-400 text-sm mb-2">Output</p>
                   <pre className="bg-neutral-800 p-3 rounded text-sm text-neutral-300 overflow-x-auto">
-                    {JSON.stringify(JSON.parse(job.job_output), null, 2)}
+                    {(() => {
+                      try {
+                        return JSON.stringify(JSON.parse(job.job_output), null, 2);
+                      } catch {
+                        return job.job_output;
+                      }
+                    })()}
                   </pre>
                 </div>
               )}
