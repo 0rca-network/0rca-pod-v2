@@ -67,6 +67,8 @@ export const Header: React.FC<HeaderProps> = ({ onToggleSidebar }) => {
             </svg>
           </button>
 
+
+
           <ConnectWalletButton />
         </div>
       </div>

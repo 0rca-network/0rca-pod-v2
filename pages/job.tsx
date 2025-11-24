@@ -45,6 +45,7 @@ export default function JobsPage() {
   const [workflows, setWorkflows] = useState<Workflow[]>([]);
   const [filter, setFilter] = useState<'all' | 'jobs' | 'workflows'>('all');
   const [loading, setLoading] = useState(true);
+  const [selectedJob, setSelectedJob] = useState<Job | null>(null);
 
   useEffect(() => {
     if (activeAccount) {
@@ -235,30 +236,24 @@ export default function JobsPage() {
           {filteredJobs.map((job) => (
             <div key={job.id} className="bg-neutral-900/50 backdrop-blur-lg rounded-2xl p-6 border-l-4 border-blue-500">
               <div className="flex items-start justify-between mb-4">
-                <div>
-                  <h3 className="text-lg font-semibold text-white mb-1">Job {job.job_id}</h3>
-                  <div className="space-y-1">
-                    <p className="text-neutral-400 text-sm">Agent ID: {job.agent_id}</p>
-                    {job.agents && (
-                      <div className="flex items-center gap-2">
-                        <a 
-                          href={`/pod/agents/${job.agent_id}`}
-                          className="text-mint-glow hover:underline text-sm font-medium"
-                        >
-                          {job.agents.name}
-                        </a>
-                        <span className="text-neutral-500">•</span>
-                        <a 
-                          href={`https://${job.agents.subdomain}.0rca.live/`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-neutral-400 hover:text-white text-sm"
-                        >
-                          {job.agents.subdomain}.0rca.live
-                        </a>
-                      </div>
-                    )}
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className="px-3 py-1 bg-blue-500/20 text-blue-400 rounded-lg text-xs font-semibold">AGENT JOB</span>
                   </div>
+                  {job.agents && (
+                    <h3 className="text-lg font-semibold text-white mb-2">{job.agents.name}</h3>
+                  )}
+                  <p className="text-neutral-400 text-sm mb-1">Job ID: {job.job_id}</p>
+                  {job.agents && (
+                    <a 
+                      href={`https://${job.agents.subdomain}.0rca.live/`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-neutral-400 hover:text-mint-glow text-sm transition-colors"
+                    >
+                      {job.agents.subdomain}.0rca.live ↗
+                    </a>
+                  )}
                 </div>
                 <div className="text-right">
                   <div className="text-neutral-400 text-sm">
@@ -267,43 +262,136 @@ export default function JobsPage() {
                   <div className="text-neutral-500 text-xs">
                     {new Date(job.created_at).toLocaleTimeString()}
                   </div>
+                  <button
+                    onClick={() => setSelectedJob(job)}
+                    className="mt-2 inline-block text-mint-glow hover:underline text-sm font-semibold"
+                  >
+                    View Details →
+                  </button>
                 </div>
               </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            </div>
+          ))}
+        </div>
+      )}
+
+      {selectedJob && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
+          onClick={() => setSelectedJob(null)}
+        >
+          {activeAccount && selectedJob.wallet_address !== activeAccount.address ? (
+            <div 
+              className="bg-neutral-900 rounded-2xl max-w-md w-full p-8 text-center border border-neutral-700"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <svg className="w-16 h-16 text-red-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              <h2 className="text-2xl font-bold text-white mb-2">Access Denied</h2>
+              <p className="text-neutral-400 mb-6">This job belongs to a different wallet address.</p>
+              <button
+                onClick={() => setSelectedJob(null)}
+                className="bg-mint-glow text-black px-6 py-3 rounded-lg font-semibold hover:opacity-90 transition-opacity"
+              >
+                Close
+              </button>
+            </div>
+          ) : (
+            <div 
+              className="bg-neutral-900 rounded-2xl max-w-3xl w-full max-h-[90vh] overflow-y-auto border border-neutral-700"
+              onClick={(e) => e.stopPropagation()}
+            >
+            <div className="sticky top-0 bg-neutral-900 border-b border-neutral-700 p-6 flex items-start justify-between">
+              <div>
+                <div className="flex items-center gap-3 mb-2">
+                  <span className="px-3 py-1 bg-blue-500/20 text-blue-400 rounded-lg text-xs font-semibold">AGENT JOB</span>
+                </div>
+                {selectedJob.agents && (
+                  <h2 className="text-2xl font-bold text-white mb-1">{selectedJob.agents.name}</h2>
+                )}
+                <p className="text-neutral-400 text-sm">Job ID: {selectedJob.job_id}</p>
+              </div>
+              <button
+                onClick={() => setSelectedJob(null)}
+                className="text-neutral-400 hover:text-white transition-colors"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <p className="text-neutral-400 text-sm mb-1">Wallet Address</p>
-                  <p className="text-white text-sm font-mono">{job.wallet_address}</p>
+                  <p className="text-neutral-400 text-sm mb-1">Created At</p>
+                  <p className="text-white">{new Date(selectedJob.created_at).toLocaleString()}</p>
                 </div>
                 <div>
-                  <p className="text-neutral-400 text-sm mb-1">Access Token</p>
-                  <p className="text-white text-sm font-mono">{job.access_token}</p>
+                  <p className="text-neutral-400 text-sm mb-1">Agent</p>
+                  {selectedJob.agents && (
+                    <a 
+                      href={`https://${selectedJob.agents.subdomain}.0rca.live/`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-mint-glow hover:underline"
+                    >
+                      {selectedJob.agents.subdomain}.0rca.live ↗
+                    </a>
+                  )}
                 </div>
               </div>
 
-              {job.job_input_hash && (
-                <div className="mb-4">
-                  <p className="text-neutral-400 text-sm mb-1">Input Hash</p>
-                  <p className="text-white text-sm font-mono">{job.job_input_hash}</p>
+              <div>
+                <p className="text-neutral-400 text-sm mb-2">Wallet Address</p>
+                <p className="text-white text-sm font-mono bg-neutral-800 p-3 rounded break-all">{selectedJob.wallet_address}</p>
+              </div>
+
+              <div>
+                <p className="text-neutral-400 text-sm mb-2">Access Token</p>
+                <p className="text-white text-sm font-mono bg-neutral-800 p-3 rounded break-all">{selectedJob.access_token}</p>
+              </div>
+
+              {selectedJob.job_input_hash && (
+                <div>
+                  <p className="text-neutral-400 text-sm mb-2">Input Hash</p>
+                  <p className="text-white text-sm font-mono bg-neutral-800 p-3 rounded break-all">{selectedJob.job_input_hash}</p>
                 </div>
               )}
 
-              {job.job_output && (
+              {selectedJob.job_output && (
                 <div>
                   <p className="text-neutral-400 text-sm mb-2">Output</p>
-                  <pre className="bg-neutral-800 p-3 rounded text-sm text-neutral-300 overflow-x-auto">
+                  <pre className="bg-neutral-800 p-4 rounded text-sm text-neutral-300 overflow-x-auto">
                     {(() => {
                       try {
-                        return JSON.stringify(JSON.parse(job.job_output), null, 2);
+                        return JSON.stringify(JSON.parse(selectedJob.job_output), null, 2);
                       } catch {
-                        return job.job_output;
+                        return selectedJob.job_output;
                       }
                     })()}
                   </pre>
                 </div>
               )}
+
+              <div className="flex gap-3">
+                <a
+                  href={`/pod/agents/${selectedJob.agent_id}`}
+                  className="flex-1 bg-mint-glow text-black px-6 py-3 rounded-lg font-semibold hover:opacity-90 transition-opacity text-center"
+                >
+                  View Agent
+                </a>
+                <button
+                  onClick={() => setSelectedJob(null)}
+                  className="flex-1 bg-neutral-700 text-white px-6 py-3 rounded-lg font-semibold hover:bg-neutral-600 transition-colors"
+                >
+                  Close
+                </button>
+              </div>
             </div>
-          ))}
+            </div>
+          )}
         </div>
       )}
     </div>

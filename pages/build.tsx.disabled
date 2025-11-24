@@ -1,0 +1,758 @@
+"use client";
+
+import React, { useCallback, useEffect, useState } from "react";
+import {
+  ReactFlow,
+  Background,
+  Controls,
+  MiniMap,
+  addEdge,
+  Handle,
+  Position,
+  type Node as RFNode,
+  type Edge as RFEdge,
+  type Connection,
+  type NodeTypes,
+  useNodesState,
+  useEdgesState,
+} from "@xyflow/react";
+import "@xyflow/react/dist/style.css";
+
+/**
+ * /app/agent-builder/page.tsx
+ *
+ * - Next.js client component (TSX)
+ * - Tailwind only (no extra UI lib)
+ * - Uses @xyflow/react
+ * - Full builder: import/export JSON, load example, validate, generate Python agent
+ *
+ * Paste this file into app/agent-builder/page.tsx
+ */
+
+// -----------------------------
+// Protected node IDs & helpers
+// -----------------------------
+const CONFIG_ID = "config-node-1";
+const INPUT_ID = "input-node-1";
+const OUTPUT_ID = "output-node-1";
+
+const makeId = () => `${Date.now()}-${Math.floor(Math.random() * 10000)}`;
+
+const parsePrice = (v?: string | number) => {
+  if (!v) return 1_000_000;
+  if (typeof v === "number") return v;
+  const s = v.toString().trim().toUpperCase();
+  if (s.endsWith("M")) return parseFloat(s.slice(0, -1)) * 1_000_000;
+  return parseInt(s.replace(/,/g, ""), 10) || 1_000_000;
+};
+
+// -----------------------------
+// Custom Node Renderer
+// -----------------------------
+type CustomNodeProps = {
+  data: any;
+  selected?: boolean;
+};
+
+const CustomNode = ({ data, selected, type }: any) => {
+  const colors: Record<string, { bg: string; border: string; text: string }> = {
+    config: { bg: "bg-blue-600", border: "border-blue-400", text: "text-blue-100" },
+    input: { bg: "bg-green-600", border: "border-green-400", text: "text-green-100" },
+    llm: { bg: "bg-purple-600", border: "border-purple-400", text: "text-purple-100" },
+    tool: { bg: "bg-orange-600", border: "border-orange-400", text: "text-orange-100" },
+    output: { bg: "bg-red-600", border: "border-red-400", text: "text-red-100" },
+  };
+  const c = colors[type] ?? colors.input;
+  const icons: Record<string, string> = { config: "⚙️", input: "📥", llm: "🤖", tool: "🔧", output: "📤" };
+
+  return (
+    <div className={`px-4 py-3 ${c.bg} rounded-lg border-2 ${c.border} min-w-[220px] ${selected ? "ring-2 ring-white" : ""}`}>
+      {type !== "config" && type !== "input" && type !== "output" && <Handle type="target" position={Position.Top} className="w-3 h-3" />}
+      <div className="font-bold text-white mb-2">
+        {icons[type]} {type.charAt(0).toUpperCase() + type.slice(1)}
+      </div>
+
+      <div className={`text-xs ${c.text} space-y-1`}>
+        {type === "config" && (
+          <>
+            <div>ID: {data?.agentId ?? "not set"}</div>
+            <div>Price: {data?.price ?? "1M"} μALGO</div>
+            <div>Receiver: {data?.receiverAddress ?? "-"}</div>
+          </>
+        )}
+        {type === "input" && <div>job_input: str (single string)</div>}
+        {type === "llm" && (
+          <>
+            <div>Model: {data?.model ?? "GPT-4"}</div>
+            <div>Prompt: {(data?.prompt ?? "").slice(0, 40)}{(data?.prompt ?? "").length > 40 ? "..." : ""}</div>
+          </>
+        )}
+        {type === "tool" && (
+          <>
+            <div>Tool: {data?.tool ?? "API Call"}</div>
+            <div>URL: {(data?.url ?? "").slice(0, 40)}{(data?.url ?? "").length > 40 ? "..." : ""}</div>
+          </>
+        )}
+        {type === "output" && <div>return: str</div>}
+      </div>
+
+      {type !== "output" && <Handle type="source" position={Position.Bottom} className="w-3 h-3" />}
+    </div>
+  );
+};
+
+const nodeTypes: NodeTypes = {
+  config: (props: any) => <CustomNode {...props} type="config" />,
+  input: (props: any) => <CustomNode {...props} type="input" />,
+  llm: (props: any) => <CustomNode {...props} type="llm" />,
+  tool: (props: any) => <CustomNode {...props} type="tool" />,
+  output: (props: any) => <CustomNode {...props} type="output" />,
+};
+
+// -----------------------------
+// Initial protected nodes
+// -----------------------------
+const initialNodes: RFNode[] = [
+  { id: CONFIG_ID, type: "config", position: { x: 120, y: 80 }, data: { agentId: "song-generator", price: "1M", receiverAddress: "ALGO_ADDR" }, deletable: false },
+  { id: INPUT_ID, type: "input", position: { x: 120, y: 260 }, data: {}, deletable: false },
+  { id: OUTPUT_ID, type: "output", position: { x: 120, y: 920 }, data: {}, deletable: false },
+];
+
+const initialEdges: RFEdge[] = [];
+
+// -----------------------------
+// Example workflow
+// -----------------------------
+const EXAMPLE_SONG = {
+  nodes: [
+    { id: CONFIG_ID, type: "config", position: { x: 150, y: 50 }, data: { agentId: "song-generator", price: "1M", receiverAddress: "ALGO_ADDR" }, deletable: false },
+    { id: INPUT_ID, type: "input", position: { x: 150, y: 200 }, data: {}, deletable: false },
+    { id: "llm-1", type: "llm", position: { x: 150, y: 360 }, data: { model: "GPT-4", prompt: "Expand this idea into a detailed creative concept for a song. Include mood, story arc, and style. Input: {job_input}" } },
+    { id: "llm-2", type: "llm", position: { x: 150, y: 540 }, data: { model: "GPT-4", prompt: "Write complete song lyrics based on this concept. Include: verse 1, chorus, verse 2, and bridge. Concept: {prev}" } },
+    { id: OUTPUT_ID, type: "output", position: { x: 150, y: 720 }, data: {}, deletable: false },
+  ],
+  edges: [
+    { id: "e1", source: INPUT_ID, target: "llm-1" },
+    { id: "e2", source: "llm-1", target: "llm-2" },
+    { id: "e3", source: "llm-2", target: OUTPUT_ID },
+  ],
+};
+
+// -----------------------------
+// Page component
+// -----------------------------
+export default function Page(): JSX.Element {
+  const [nodes, setNodes, onNodesChange] = useNodesState<RFNode[]>(initialNodes);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<RFEdge[]>(initialEdges);
+  const [selected, setSelected] = useState<RFNode | null>(null);
+  const [showPanel, setShowPanel] = useState<boolean>(false);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
+
+  // ensure protected nodes (in case of load)
+  useEffect(() => {
+    const mustAdd: RFNode[] = [];
+    if (!nodes.find((n) => n.id === CONFIG_ID)) {
+      mustAdd.push({ id: CONFIG_ID, type: "config", position: { x: 120, y: 80 }, data: { agentId: "agent", price: "1M", receiverAddress: "" }, deletable: false });
+    }
+    if (!nodes.find((n) => n.id === INPUT_ID)) {
+      mustAdd.push({ id: INPUT_ID, type: "input", position: { x: 120, y: 260 }, data: {}, deletable: false });
+    }
+    if (!nodes.find((n) => n.id === OUTPUT_ID)) {
+      mustAdd.push({ id: OUTPUT_ID, type: "output", position: { x: 120, y: 920 }, data: {}, deletable: false });
+    }
+    if (mustAdd.length) setNodes((nds) => [...nds, ...mustAdd]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // add node
+  const addNode = useCallback(
+    (type: string) => {
+      const newNode: RFNode = {
+        id: makeId(),
+        type,
+        position: { x: Math.random() * 600 + 200, y: Math.random() * 200 + 300 },
+        data:
+          type === "llm"
+            ? { model: "GPT-4", prompt: "Process this: {prev}" }
+            : type === "tool"
+            ? { tool: "API Call", url: "https://api.example.com?q={prev}", outputKey: "" }
+            : {},
+      };
+      setNodes((nds) => [...nds, newNode]);
+    },
+    [setNodes]
+  );
+
+  // connection rules
+  const onConnect = useCallback(
+    (params: Connection) => {
+      const src = params.source;
+      const tgt = params.target;
+      if (tgt === INPUT_ID) {
+        alert("Cannot connect into the Input node");
+        return;
+      }
+      if (src === OUTPUT_ID) {
+        alert("Cannot create outgoing edges from Output node");
+        return;
+      }
+      // prevent duplicate edges
+      if (edges.find((e) => e.source === src && e.target === tgt)) return;
+      // prevent branching except from INPUT node
+      const outgoing = edges.filter((e) => e.source === src);
+      if (outgoing.length >= 1 && src !== INPUT_ID) {
+        alert("Parallel branching not supported. Use router/condition pattern.");
+        return;
+      }
+      setEdges((eds) => addEdge(params as any, eds));
+    },
+    [edges, setEdges]
+  );
+
+  // node click
+  const onNodeClick = useCallback((_: any, node: RFNode) => {
+    setSelected(node);
+    setShowPanel(true);
+  }, []);
+
+  const updateNodeData = useCallback(
+    (key: string, value: any) => {
+      if (!selected) return;
+      setNodes((nds) => nds.map((n) => (n.id === selected.id ? { ...n, data: { ...n.data, [key]: value } } : n)));
+      setSelected({ ...selected, data: { ...selected.data, [key]: value } } as RFNode);
+    },
+    [selected, setNodes]
+  );
+
+  const deleteNode = useCallback(() => {
+    if (!selected) return;
+    if ([CONFIG_ID, INPUT_ID, OUTPUT_ID].includes(selected.id)) return;
+    setNodes((nds) => nds.filter((n) => n.id !== selected.id));
+    setEdges((eds) => eds.filter((e) => e.source !== selected.id && e.target !== selected.id));
+    setSelected(null);
+    setShowPanel(false);
+  }, [selected, setNodes, setEdges]);
+
+  // save / load workflow
+  const saveWorkflow = useCallback(() => {
+    const wf = { nodes, edges };
+    const blob = new Blob([JSON.stringify(wf, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "agent-workflow.json";
+    a.click();
+  }, [nodes, edges]);
+
+  const loadWorkflow = useCallback((ev: React.ChangeEvent<HTMLInputElement>) => {
+    const file = ev.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const wf = JSON.parse(e.target?.result as string);
+        if (!wf.nodes || !wf.edges) throw new Error("Invalid workflow");
+        setNodes(wf.nodes);
+        setEdges(wf.edges);
+      } catch {
+        alert("Invalid workflow file");
+      }
+    };
+    reader.readAsText(file);
+  }, [setNodes, setEdges]);
+
+  // load example
+  const loadExample = useCallback(() => {
+    setNodes(EXAMPLE_SONG.nodes as RFNode[]);
+    setEdges(EXAMPLE_SONG.edges as RFEdge[]);
+    setShowPanel(false);
+    setSelected(null);
+  }, [setNodes, setEdges]);
+
+  // -----------------------------
+  // Validation
+  // -----------------------------
+  const validateGraph = useCallback(() => {
+    const errors: string[] = [];
+    if (!nodes.find((n) => n.id === INPUT_ID)) errors.push("Missing Input node");
+    if (!nodes.find((n) => n.id === OUTPUT_ID)) errors.push("Missing Output node");
+
+    // build adjacency
+    const adj = new Map<string, string[]>();
+    nodes.forEach((n) => adj.set(n.id, []));
+    edges.forEach((e) => {
+      adj.get(e.source)?.push(e.target);
+    });
+
+    // reachability from input
+    const q: string[] = [INPUT_ID];
+    const seen = new Set<string>([INPUT_ID]);
+    while (q.length) {
+      const cur = q.shift()!;
+      (adj.get(cur) || []).forEach((nx) => {
+        if (!seen.has(nx)) {
+          seen.add(nx);
+          q.push(nx);
+        }
+      });
+    }
+    if (!seen.has(OUTPUT_ID)) errors.push("Output is not reachable from Input");
+
+    // cycle detection (DFS)
+    const color: Record<string, number> = {};
+    let hasCycle = false;
+    const dfs = (u: string) => {
+      color[u] = 1;
+      for (const v of adj.get(u) || []) {
+        if (color[v] === 1) {
+          hasCycle = true;
+          return;
+        }
+        if (!color[v]) dfs(v);
+      }
+      color[u] = 2;
+    };
+    dfs(INPUT_ID);
+    if (hasCycle) errors.push("Graph contains a cycle");
+
+    // branching (outgoing > 1) - allow for INPUT node
+    for (const [k, list] of adj.entries()) {
+      if (list.length > 1 && k !== INPUT_ID) errors.push(`Node ${k} has ${list.length} outgoing edges (branching not supported)`);
+    }
+
+    setValidationErrors(errors);
+    return errors.length === 0;
+  }, [nodes, edges]);
+
+  // -----------------------------
+  // Compiler: linearize & compile nodes to Python
+  // -----------------------------
+  const buildAdj = useCallback(() => {
+    const adj = new Map<string, string[]>();
+    nodes.forEach((n) => adj.set(n.id, []));
+    edges.forEach((e) => {
+      if (!adj.has(e.source)) adj.set(e.source, []);
+      adj.get(e.source)!.push(e.target);
+    });
+    return adj;
+  }, [nodes, edges]);
+
+  const linearize = useCallback(() => {
+    const adj = buildAdj();
+    const order: RFNode[] = [];
+    const seen = new Set<string>();
+    let cur: string | undefined = INPUT_ID;
+    while (cur) {
+      const node = nodes.find((n) => n.id === cur);
+      if (!node) break;
+      if (seen.has(cur)) break;
+      seen.add(cur);
+      if (![CONFIG_ID, INPUT_ID, OUTPUT_ID].includes(cur)) order.push(node);
+      const next = (adj.get(cur) || [])[0];
+      if (!next || next === OUTPUT_ID) break;
+      cur = next;
+    }
+    return order;
+  }, [buildAdj, nodes]);
+
+  const escapeTriple = (s = "") => s.replace(/\"\"\"/g, '\\"""');
+
+const compileNode = useCallback((node: RFNode, counters: { llm: number; tool: number }, allVars: string[]) => {
+  if (node.type === "llm") {
+    counters.llm += 1;
+    const i = counters.llm;
+    const model = node.data?.model ?? "GPT-4";
+    const promptTemplate = node.data?.prompt ?? "{prev}";
+    
+    const modelMap: Record<string, string> = {
+      "GPT-4": "gpt-4.1",
+      "GPT-3.5": "gpt-4.1-mini",
+      "Claude-3": "claude-3-opus-20240229",
+      "Llama-3": "llama-3"
+    };
+    const apiModel = modelMap[model] ?? "gpt-4.1";
+
+    // Replace placeholders: {prev}, {input}, {var_tool_X}
+    let cleanPrompt = promptTemplate;
+    cleanPrompt = cleanPrompt.replace(/\{prev\}/g, "{prev}").replace(/\{input\}/g, "{job_input}").replace(/\{job_input\}/g, "{job_input}");
+    allVars.forEach(v => {
+      cleanPrompt = cleanPrompt.replace(new RegExp(`\\{${v}\\}`, "g"), `{${v}}`);
+    });
+
+    return [
+      `# LLM node ${node.id}`,
+      `prompt_${i} = f\"\"\"${escapeTriple(cleanPrompt)}\"\"\"`,
+      `response_${i} = client.responses.create(model="${apiModel}", input=prompt_${i})`,
+      `prev = response_${i}.output_text`
+    ].join("\n");
+  }
+
+  if (node.type === "tool") {
+    counters.tool += 1;
+    const i = counters.tool;
+    const urlTemplate = node.data?.url ?? "";
+    const outputKey = node.data?.outputKey ?? "";
+
+    const cleanUrl = urlTemplate.replace(/\{prev\}/g, "{prev}").replace(/\{input\}/g, "{job_input}").replace(/\{job_input\}/g, "{job_input}");
+
+    const lines = [
+      `# Tool node ${node.id}`,
+      `url_${i} = f"${cleanUrl}"`,
+      `response_${i} = requests.get(url_${i}, timeout=10)`,
+      `try:`,
+      `    response_${i}.raise_for_status()`,
+      `    json_${i} = response_${i}.json()`,
+      `except Exception:`,
+      `    json_${i} = None`,
+    ];
+
+    if (outputKey) {
+      lines.push(`var_tool_${i} = json_${i}.get('${outputKey}') if json_${i} is not None else response_${i}.text`);
+    } else {
+      lines.push(`var_tool_${i} = json_${i} if json_${i} is not None else response_${i}.text`);
+    }
+    lines.push(`prev = var_tool_${i}`);
+    allVars.push(`var_tool_${i}`);
+
+    return lines.join("\n");
+  }
+
+  return `# Unsupported node type: ${node.type}`;
+}, []);
+
+const generatedCode = React.useMemo(() => {
+  const config = nodes.find((n) => n.type === "config") ?? nodes.find((n) => n.id === CONFIG_ID);
+  const seq = linearize();
+  const counters = { llm: 0, tool: 0 };
+  const allVars: string[] = [];
+
+  let body = "    prev = job_input\n\n    # Generated nodes\n";
+  seq.forEach((n) => {
+    const snippet = compileNode(n, counters, allVars);
+    body += snippet.split("\n").map(l => "    " + l).join("\n") + "\n\n";
+  });
+
+  body += "    return prev\n";
+
+  const agentId = config?.data?.agentId ?? "my-agent-id";
+  const receiver = config?.data?.receiverAddress ?? "MY_ALGO_ADDRESS";
+  const price = parsePrice(config?.data?.price);
+
+  return `from orca_agent_sdk import AgentConfig, AgentServer
+import requests
+from openai import OpenAI
+
+client = OpenAI()
+
+def handle_task(job_input: str) -> str:
+${body}
+
+if __name__ == "__main__":
+    config = AgentConfig(
+        agent_id="${agentId}",
+        receiver_address="${receiver}",
+        price_microalgos=${price},
+    )
+    AgentServer(config=config, handler=handle_task).run()
+`;
+}, [nodes, edges, linearize, compileNode]);
+
+  // download agent file
+  const downloadAgent = useCallback(() => {
+    if (!validateGraph()) {
+      if (!confirm("Graph has validation errors. Download anyway?")) return;
+    }
+    const blob = new Blob([generatedCode], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "agent.py";
+    a.click();
+  }, [generatedCode, validateGraph]);
+
+  // download deployment package
+  const downloadDeploymentPackage = useCallback(async () => {
+    if (!validateGraph()) {
+      if (!confirm("Graph has validation errors. Download anyway?")) return;
+    }
+
+    const config = nodes.find((n) => n.type === "config") ?? nodes.find((n) => n.id === CONFIG_ID);
+    const agentId = config?.data?.agentId ?? "my-agent";
+    const repoName = agentId.toLowerCase().replace(/[^a-z0-9-]/g, "-");
+
+    const requirements = `orca-agent-sdk
+requests
+openai`;
+
+    const dockerfile = `FROM python:3.11-slim
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+COPY agent.py .
+CMD ["python", "agent.py"]`;
+
+    const githubWorkflow = `name: Deploy Agent
+on:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Login to GitHub Container Registry
+        run: echo "\${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u \${{ github.actor }} --password-stdin
+      
+      - name: Build and Push
+        run: |
+          docker build -t ghcr.io/\${{ github.repository }}/${repoName}:latest .
+          docker push ghcr.io/\${{ github.repository }}/${repoName}:latest
+      
+      - name: Deploy to K8s
+        run: |
+          echo "\${{ secrets.KUBECONFIG }}" > kubeconfig
+          kubectl --kubeconfig=kubeconfig apply -f k8s/deployment.yaml`;
+
+    const k8sDeployment = `apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ${repoName}
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: ${repoName}
+  template:
+    metadata:
+      labels:
+        app: ${repoName}
+    spec:
+      containers:
+      - name: agent
+        image: ghcr.io/YOUR_USERNAME/YOUR_REPO/${repoName}:latest
+        env:
+        - name: OPENAI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: agent-secrets
+              key: openai-api-key
+        - name: ALGORAND_PRIVATE_KEY
+          valueFrom:
+            secretKeyRef:
+              name: agent-secrets
+              key: algo-private-key
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ${repoName}
+spec:
+  selector:
+    app: ${repoName}
+  ports:
+  - port: 80
+    targetPort: 8080`;
+
+    const readme = `# ${agentId} Agent
+
+Generated from 0rca POD Builder
+
+## Deploy to GitHub + K8s
+
+### 1. Create GitHub repo
+\`\`\`bash
+gh repo create ${repoName} --public
+\`\`\`
+
+### 2. Push code
+\`\`\`bash
+git init
+git add .
+git commit -m "Initial agent"
+git branch -M main
+git remote add origin https://github.com/YOUR_USERNAME/${repoName}.git
+git push -u origin main
+\`\`\`
+
+### 3. Add GitHub Secrets
+Go to repo Settings > Secrets and add:
+- \`KUBECONFIG\`: Your K8s cluster config
+
+### 4. Create K8s secrets
+\`\`\`bash
+kubectl create secret generic agent-secrets \\
+  --from-literal=openai-api-key=YOUR_OPENAI_KEY \\
+  --from-literal=algo-private-key=YOUR_ALGO_KEY
+\`\`\`
+
+### 5. Push triggers auto-deploy
+GitHub Actions will:
+- Build Docker image
+- Push to ghcr.io
+- Deploy to your K8s cluster
+
+## Local Testing
+\`\`\`bash
+export OPENAI_API_KEY=your_key
+export ALGORAND_PRIVATE_KEY=your_key
+python agent.py
+\`\`\``;
+
+    // Create zip using JSZip
+    const JSZip = (await import("jszip")).default;
+    const zip = new JSZip();
+    zip.file("agent.py", generatedCode);
+    zip.file("requirements.txt", requirements);
+    zip.file("Dockerfile", dockerfile);
+    zip.file(".github/workflows/deploy.yml", githubWorkflow);
+    zip.file("k8s/deployment.yaml", k8sDeployment);
+    zip.file("README.md", readme);
+
+    const blob = await zip.generateAsync({ type: "blob" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${repoName}-deployment.zip`;
+    a.click();
+  }, [generatedCode, validateGraph, nodes]);
+
+  // -----------------------------
+  // render
+  // -----------------------------
+  return (
+    <div className="h-screen flex">
+      {/* Left palette */}
+      <div className="w-64 bg-neutral-900 border-r border-neutral-700 p-4 space-y-3 overflow-y-auto">
+        <h2 className="text-white font-bold mb-2">Nodes</h2>
+        <button onClick={() => addNode("llm")} className="w-full bg-purple-600 text-white px-3 py-2 rounded text-sm hover:bg-purple-700">🤖 LLM</button>
+        <button onClick={() => addNode("tool")} className="w-full bg-orange-600 text-white px-3 py-2 rounded text-sm hover:bg-orange-700">🔧 Tool</button>
+
+        <div className="border-t border-neutral-700 pt-3 mt-3 space-y-2">
+          <h3 className="text-white font-semibold text-sm mb-2">Workflow</h3>
+          <button onClick={saveWorkflow} className="w-full bg-neutral-700 text-white px-3 py-2 rounded text-sm hover:bg-neutral-600">💾 Export JSON</button>
+
+          <label className="w-full bg-neutral-700 text-white px-3 py-2 rounded text-sm hover:bg-neutral-600 cursor-pointer block text-center">
+            📂 Import JSON
+            <input type="file" accept=".json" onChange={loadWorkflow} className="hidden" />
+          </label>
+
+          <div className="space-y-2">
+            <button onClick={loadExample} className="w-full bg-green-600 text-white px-3 py-2 rounded text-sm hover:bg-green-700">Load Example</button>
+            <button onClick={downloadAgent} className="w-full bg-[#63f2d2] text-black px-3 py-2 rounded text-sm hover:opacity-90">⬇ agent.py</button>
+            <button onClick={downloadDeploymentPackage} className="w-full bg-[#63f2d2] text-black px-3 py-2 rounded text-sm hover:opacity-90 font-bold">📦 Deploy Package</button>
+          </div>
+        </div>
+
+        <div className="pt-3">
+          <h3 className="text-white font-semibold text-sm mb-2">Validation</h3>
+          <button onClick={validateGraph} className="w-full bg-neutral-700 text-white px-3 py-2 rounded text-sm hover:bg-neutral-600 mb-2">Run Validation</button>
+          {validationErrors.length === 0 ? (
+            <div className="text-green-400 text-xs">No validation errors</div>
+          ) : (
+            <ul className="text-red-400 text-xs space-y-1">
+              {validationErrors.map((e, i) => (
+                <li key={i}>• {e}</li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
+
+      {/* Canvas */}
+      <div className="flex-1 relative">
+        <ReactFlow nodes={nodes} edges={edges} onNodesChange={onNodesChange} onEdgesChange={onEdgesChange} onConnect={onConnect} onNodeClick={onNodeClick} nodeTypes={nodeTypes} fitView>
+          <Background color="white" gap={40} size={1} />
+          <Controls />
+          <MiniMap nodeColor={(n) => {
+            const map: Record<string, string> = { config: "#2563eb", input: "#16a34a", llm: "#9333ea", tool: "#ea580c", output: "#dc2626" };
+            return map[n.type as string] ?? "#888";
+          }} />
+        </ReactFlow>
+      </div>
+
+      {/* Right panel */}
+      <div className="w-96 bg-neutral-900 border-l border-neutral-700 p-4 overflow-auto">
+        {showPanel && selected ? (
+          <>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-white font-bold">Properties</h2>
+              <button onClick={() => setShowPanel(false)} className="text-neutral-400 hover:text-white">✕</button>
+            </div>
+
+            <div className="space-y-4">
+              {selected.type === "config" && (
+                <>
+                  <div>
+                    <label className="text-neutral-300 text-sm block mb-1">Agent ID</label>
+                    <input value={selected.data?.agentId ?? ""} onChange={(e) => updateNodeData("agentId", e.target.value)} className="w-full bg-neutral-800 text-white px-3 py-2 rounded text-sm" />
+                  </div>
+                  <div>
+                    <label className="text-neutral-300 text-sm block mb-1">Receiver Address</label>
+                    <input value={selected.data?.receiverAddress ?? ""} onChange={(e) => updateNodeData("receiverAddress", e.target.value)} className="w-full bg-neutral-800 text-white px-3 py-2 rounded text-sm" />
+                  </div>
+                  <div>
+                    <label className="text-neutral-300 text-sm block mb-1">Price (e.g. 1M)</label>
+                    <input value={selected.data?.price ?? ""} onChange={(e) => updateNodeData("price", e.target.value)} className="w-full bg-neutral-800 text-white px-3 py-2 rounded text-sm" placeholder="1M" />
+                  </div>
+                </>
+              )}
+
+              {selected.type === "llm" && (
+                <>
+                  <div>
+                    <label className="text-neutral-300 text-sm block mb-1">Model</label>
+                    <select value={selected.data?.model ?? "GPT-4"} onChange={(e) => updateNodeData("model", e.target.value)} className="w-full bg-neutral-800 text-white px-3 py-2 rounded text-sm">
+                      <option>GPT-4</option>
+                      <option>GPT-3.5</option>
+                      <option>Claude-3</option>
+                      <option>Llama-3</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-neutral-300 text-sm block mb-1">Prompt Template</label>
+                    <textarea value={selected.data?.prompt ?? ""} onChange={(e) => updateNodeData("prompt", e.target.value)} className="w-full bg-neutral-800 text-white px-3 py-2 rounded text-sm" rows={6} placeholder="Write lyrics based on {input}" />
+                    <div className="text-neutral-500 text-xs mt-1">Use <code>{`{input}`}</code> and <code>{`{prev}`}</code> in prompts. Input is a single string.</div>
+                  </div>
+                </>
+              )}
+
+              {selected.type === "tool" && (
+                <>
+                  <div>
+                    <label className="text-neutral-300 text-sm block mb-1">Tool Type</label>
+                    <select value={selected.data?.tool ?? "API Call"} onChange={(e) => updateNodeData("tool", e.target.value)} className="w-full bg-neutral-800 text-white px-3 py-2 rounded text-sm">
+                      <option>API Call</option>
+                      <option>Web Scraper</option>
+                      <option>Database Query</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-neutral-300 text-sm block mb-1">URL / Endpoint</label>
+                    <input value={selected.data?.url ?? ""} onChange={(e) => updateNodeData("url", e.target.value)} className="w-full bg-neutral-800 text-white px-3 py-2 rounded text-sm" placeholder="https://api.example.com?q={input}" />
+                  </div>
+                  <div>
+                    <label className="text-neutral-300 text-sm block mb-1">Output JSON Key (optional)</label>
+                    <input value={selected.data?.outputKey ?? ""} onChange={(e) => updateNodeData("outputKey", e.target.value)} className="w-full bg-neutral-800 text-white px-3 py-2 rounded text-sm" placeholder="lyrics" />
+                  </div>
+                </>
+              )}
+
+              {selected.id !== CONFIG_ID && (
+                <button onClick={deleteNode} className="w-full bg-red-600 text-white px-3 py-2 rounded text-sm hover:bg-red-700 mt-4">🗑️ Delete Node</button>
+              )}
+            </div>
+          </>
+        ) : (
+          <>
+            <h2 className="text-white font-bold mb-4">Generated Code</h2>
+            <pre className="bg-black text-green-400 p-4 rounded text-xs overflow-auto max-h-[calc(100vh-8rem)]">
+              {generatedCode}
+            </pre>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}

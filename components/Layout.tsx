@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useRouter } from 'next/router';
 import { Header } from './Header';
 import { Sidebar } from './Sidebar';
 import { Footer } from './Footer';
@@ -8,8 +9,20 @@ interface LayoutProps {
 }
 
 export const Layout: React.FC<LayoutProps> = ({ children }) => {
+  const router = useRouter();
+  const isHomePage = router.pathname === '/';
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarHovered, setSidebarHovered] = useState(false);
+
+  if (isHomePage) {
+    return (
+      <div className="relative flex h-screen w-screen bg-black">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden">
+          {children}
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="relative flex h-screen w-screen bg-black">

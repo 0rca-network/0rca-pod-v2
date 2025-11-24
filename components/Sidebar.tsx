@@ -52,8 +52,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen }) => {
             <Link
               key={item.href}
               href={item.href}
-              className={`nav-link flex items-center gap-3 px-4 py-2 rounded-lg text-gray-300 transition-colors hover:bg-white/5 ${isActive(item.href) ? 'active' : ''
-                }`}
+              className={`nav-link flex items-center gap-3 px-4 py-2 rounded-lg transition-colors ${
+                isActive(item.href) 
+                  ? 'bg-mint-glow/10 text-mint-glow border border-mint-glow/30' 
+                  : 'text-gray-300 hover:bg-white/5'
+              }`}
             >
               {item.icon}
               <span>{item.label}</span>
