@@ -46,12 +46,21 @@ export default function WorkflowPage() {
 
   const executeNextStep = async () => {
     try {
-      await fetchWorkflow();
+      console.log('Fetching workflow state...');
+      const res = await fetch(`/api/workflows/${workflow_id}`);
+      const data = await res.json();
+      setWorkflow(data.workflow);
+      setSteps(data.steps);
       
-      const currentStep = steps.find(s => s.status === 'pending');
-      if (!currentStep) return;
+      const currentStep = data.steps.find((s: StepResult) => s.status === 'pending');
+      console.log('Current pending step:', currentStep);
+      if (!currentStep) {
+        console.log('No pending steps found');
+        return;
+      }
 
-      const res = await fetch('/api/workflows/step/start_job', {
+      console.log('Starting job for step', currentStep.step_number);
+      const jobRes = await fetch('/api/workflows/step/start_job', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -61,7 +70,8 @@ export default function WorkflowPage() {
         })
       });
 
-      const result = await res.json();
+      const result = await jobRes.json();
+      console.log('Job creation result:', result);
       
       if (result.error) {
         setError(`Step ${currentStep.step_number} failed: ${result.error}`);
@@ -71,9 +81,14 @@ export default function WorkflowPage() {
       await fetchWorkflow();
       
       if (result.jobData?.unsigned_group_txns) {
+        console.log('Signing transactions...');
         await signAndSubmit(result.stepResultId, result.jobData);
+      } else {
+        console.error('No unsigned transactions in result');
+        setError('No transactions to sign');
       }
     } catch (err: any) {
+      console.error('Execute step error:', err);
       setError(`Failed to execute step: ${err.message}`);
     }
   };
@@ -99,6 +114,7 @@ export default function WorkflowPage() {
         }
       }
 
+      await new Promise(resolve => setTimeout(resolve, 500));
       const signed = await signTransactions(cleanTxns);
       const signedTxns = signed.filter((txn): txn is Uint8Array => txn !== null);
       
@@ -115,8 +131,9 @@ export default function WorkflowPage() {
       });
 
       pollStep(stepResultId);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error signing transaction:', error);
+      setError(`Payment failed: ${error.message || 'Transaction signing failed'}`);
     }
   };
 
@@ -133,7 +150,7 @@ export default function WorkflowPage() {
 
       if (data.status === 'succeeded') {
         if (!data.completed) {
-          setTimeout(() => executeNextStep(), 1000);
+          setTimeout(() => executeNextStep(), 3000);
         }
       } else if (data.status !== 'failed') {
         setTimeout(poll, 3000);
@@ -208,7 +225,7 @@ export default function WorkflowPage() {
         <h2 className="text-2xl font-bold text-white mb-6">Workflow Plan</h2>
         <p className="text-neutral-400 mb-6">{workflow.plan.reasoning}</p>
         
-        <div className="space-y-4">
+        <div className="flex flex-col gap-4">
           {workflow.plan.steps.map((planStep, idx) => {
             const stepResult = steps.find(s => s.step_number === planStep.step_number);
             
@@ -237,7 +254,7 @@ export default function WorkflowPage() {
                 {stepResult?.output && (
                   <div className="mt-4 bg-neutral-800 p-4 rounded">
                     <p className="text-sm text-neutral-400 mb-2">Output:</p>
-                    <pre className="text-white text-sm overflow-x-auto">{stepResult.output}</pre>
+                    <pre className="text-white text-sm whitespace-pre-wrap break-words">{stepResult.output}</pre>
                   </div>
                 )}
               </div>

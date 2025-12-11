@@ -57,7 +57,7 @@ export async function startWorkflow(workflowId: string) {
 export async function createAgentJob(workflowId: string, stepNumber: number, walletAddress: string) {
   const { data: workflow } = await supabase
     .from('workflows')
-    .select('plan')
+    .select('plan, user_message')
     .eq('workflow_id', workflowId)
     .single();
   
@@ -71,7 +71,7 @@ export async function createAgentJob(workflowId: string, stepNumber: number, wal
   if (!stepResult || !workflow) throw new Error('Step not found');
   
   const step = workflow.plan.steps.find((s: WorkflowStep) => s.step_number === stepNumber);
-  let inputData = step.input_data;
+  let inputData = step.input_data || {};
   
   if (stepNumber > 1) {
     const { data: prevStep } = await supabase
@@ -86,16 +86,20 @@ export async function createAgentJob(workflowId: string, stepNumber: number, wal
     }
   }
   
-  // Convert inputData to string if agent expects string input
-  let jobInput = inputData;
-  if (stepResult.agent.example_input && typeof stepResult.agent.example_input === 'string') {
-    try {
-      JSON.parse(stepResult.agent.example_input);
-    } catch {
-      // example_input is a plain string, so convert our object to string
-      jobInput = JSON.stringify(inputData);
-    }
+  // If inputData is empty or has no meaningful data, use user message
+  if (!inputData || Object.keys(inputData).length === 0 || JSON.stringify(inputData) === '{}') {
+    inputData = { query: workflow.user_message || step.description || 'Process this request' };
   }
+  
+  // All agents expect string input - convert object to string
+  const jobInput = typeof inputData === 'string' ? inputData : JSON.stringify(inputData);
+  
+  console.log('Sending to agent:', {
+    subdomain: stepResult.agent.subdomain,
+    sender_address: walletAddress,
+    job_input: jobInput,
+    job_input_type: typeof jobInput
+  });
   
   const response = await fetch(`https://${stepResult.agent.subdomain}.0rca.live/start_job`, {
     method: 'POST',
@@ -104,10 +108,19 @@ export async function createAgentJob(workflowId: string, stepNumber: number, wal
       sender_address: walletAddress,
       job_input: jobInput
     })
+  }).catch(err => {
+    console.error('Fetch error:', err);
+    throw new Error(`Failed to connect to agent: ${err.message}`);
   });
   
   if (!response.ok) {
-    throw new Error(`Agent returned ${response.status}: ${await response.text()}`);
+    const errorText = await response.text();
+    console.error('Agent error response:', {
+      status: response.status,
+      body: errorText,
+      agent: stepResult.agent.subdomain
+    });
+    throw new Error(`Agent returned ${response.status}: ${errorText.substring(0, 200)}`);
   }
   
   const jobData = await response.json();
@@ -289,12 +302,12 @@ ${agents.map(a => `
 Create a workflow plan that:
 1. Identifies which agents are needed
 2. Orders them sequentially
-3. Defines input for each step matching the agent's example_input format EXACTLY
+3. Defines ACTUAL input data for each step based on the user request
 4. Passes outputs between steps
 
-IMPORTANT: The input_data for each step MUST match the format shown in the agent's example_input.
-If example_input is a string, input_data should be a simple object that will be stringified.
-If example_input is JSON, input_data should match that JSON structure.
+CRITICAL: input_data MUST contain real data from the user request, NOT empty objects.
+For example, if user asks "find flights to Paris", input_data should be {"destination": "Paris", "query": "find flights to Paris"}.
+Match the structure of example_input but fill with actual user data.
 
 Return JSON:
 {
@@ -306,7 +319,7 @@ Return JSON:
       "agent_name": "name",
       "description": "what this step does",
       "input_schema": {},
-      "input_data": {}
+      "input_data": {"key": "actual_value_from_user_request"}
     }
   ]
 }`;
