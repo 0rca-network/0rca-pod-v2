@@ -1,4 +1,4 @@
-# 0rca POD Marketplace
+# 0rca POD Cronos Marketplace
 
 A premium AI agent marketplace built with Next.js, React, and Tailwind CSS.
 

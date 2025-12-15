@@ -6,9 +6,9 @@ import { User } from '@supabase/supabase-js'
 import { DeploymentModal } from '@/components/DeploymentModal'
 import { DeploymentLogs } from '@/components/DeploymentLogs'
 import { WalletProvider, useWallet } from "@txnlab/use-wallet-react";
-import { AlgorandClient } from '@algorandfoundation/algokit-utils'
+import { CronosClient } from '@cronosfoundation/algokit-utils'
 import { AgentsContractClient } from '@/contracts/AgentContracts'
-import { AlgoAmount } from '@algorandfoundation/algokit-utils/types/amount'
+import { AlgoAmount } from '@cronosfoundation/algokit-utils/types/amount'
 import { getApplicationAddress } from 'algosdk'
 import { categorizeAgentByTags, AVAILABLE_TAGS } from '@/lib/categorize-agent'
 
@@ -27,7 +27,7 @@ interface Repository {
 
 export default function DeployPage() {
   const { activeAddress, transactionSigner } = useWallet()
-  const algorand = AlgorandClient.testNet()
+  const cronos = CronosClient.testNet()
   const DEFAULT_APP_ID =  749655317
   
   const [mounted, setMounted] = useState(false)
@@ -131,13 +131,13 @@ export default function DeployPage() {
     }
 
     try {
-      setDeploymentLogs(prev => [...prev, '🔗 Creating agent on Algorand blockchain...'])
+      setDeploymentLogs(prev => [...prev, '🔗 Creating agent on Cronos blockchain...'])
       
       const appClient = new AgentsContractClient({
         appId: BigInt(DEFAULT_APP_ID),
         defaultSender: activeAddress,
         defaultSigner: transactionSigner,
-        algorand,
+        cronos,
       })
 
       const result = await appClient.send.createAgent({
@@ -503,7 +503,7 @@ export default function DeployPage() {
                   <div className="bg-yellow-900 border border-yellow-600 rounded-lg p-4 mb-4">
                     <div className="text-yellow-400 font-semibold mb-2">⚠️ Wallet Required</div>
                     <div className="text-yellow-300 text-sm">
-                      Connect your Algorand wallet to create agents on the blockchain
+                      Connect your Cronos wallet to create agents on the blockchain
                     </div>
                   </div>
                 )}

@@ -12,7 +12,7 @@
   },
   "dependencies": {
     "@agoralabs-sh/avm-web-provider": "^1.7.0",
-    "@algorandfoundation/algokit-utils": "^9.1.2",
+    "@cronosfoundation/algokit-utils": "^9.1.2",
     "@blockshake/defly-connect": "^1.2.1",
     "@perawallet/connect": "^1.4.2",
     "@supabase/supabase-js": "^2.76.1",
