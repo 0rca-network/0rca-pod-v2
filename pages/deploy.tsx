@@ -6,9 +6,9 @@ import { User } from '@supabase/supabase-js'
 import { DeploymentModal } from '@/components/DeploymentModal'
 import { DeploymentLogs } from '@/components/DeploymentLogs'
 import { WalletProvider, useWallet } from "@txnlab/use-wallet-react";
-import { CronosClient } from '@cronosfoundation/algokit-utils'
+import { AlgorandClient } from '@algorandfoundation/algokit-utils'
 import { AgentsContractClient } from '@/contracts/AgentContracts'
-import { AlgoAmount } from '@cronosfoundation/algokit-utils/types/amount'
+import { AlgoAmount } from '@algorandfoundation/algokit-utils/types/amount'
 import { getApplicationAddress } from 'algosdk'
 import { categorizeAgentByTags, AVAILABLE_TAGS } from '@/lib/categorize-agent'
 
@@ -27,7 +27,7 @@ interface Repository {
 
 export default function DeployPage() {
   const { activeAddress, transactionSigner } = useWallet()
-  const cronos = CronosClient.testNet()
+  const algorand = AlgorandClient.testNet()
   const DEFAULT_APP_ID =  749655317
   
   const [mounted, setMounted] = useState(false)
@@ -137,7 +137,7 @@ export default function DeployPage() {
         appId: BigInt(DEFAULT_APP_ID),
         defaultSender: activeAddress,
         defaultSigner: transactionSigner,
-        cronos,
+        algorand,
       })
 
       const result = await appClient.send.createAgent({
