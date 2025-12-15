@@ -90,6 +90,7 @@ const ConnectWalletModal = ({
                   `[${wallet.activeAccount.address.slice(0, 3)}...${wallet.activeAccount.address.slice(-3)}]`}
                 {wallet.isActive && ` (active)`}
               </span>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={wallet.metadata.icon || "/placeholder.svg?height=24&width=24&query=wallet%20icon"}
                 alt={`${wallet.metadata.name} Icon`}

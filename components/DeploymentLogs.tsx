@@ -37,6 +37,7 @@ export function DeploymentLogs({ agentId, onClose }: DeploymentLogsProps) {
     }
 
     mockDeployment()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   return (

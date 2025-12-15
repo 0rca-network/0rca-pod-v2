@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { supabase } from '@/lib/supabase';
 import { User } from '@supabase/supabase-js';
 
@@ -110,10 +111,10 @@ export default function JobsPage() {
               <line x1="12" y1="17" x2="12" y2="21"></line>
             </svg>
             <h3 className="text-xl font-semibold text-white mb-2">No Jobs Yet</h3>
-            <p className="text-neutral-400 mb-4">You haven't executed any agent jobs yet.</p>
-            <a href="/pod" className="inline-block bg-mint-glow text-black px-6 py-2 rounded-lg font-semibold hover:opacity-90 transition-opacity">
+            <p className="text-neutral-400 mb-4">You haven&apos;t executed any agent jobs yet.</p>
+            <Link href="/pod" className="inline-block bg-mint-glow text-black px-6 py-2 rounded-lg font-semibold hover:opacity-90 transition-opacity">
               Browse Agents
-            </a>
+            </Link>
           </div>
         </div>
       ) : (

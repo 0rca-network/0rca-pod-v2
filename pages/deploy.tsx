@@ -72,6 +72,7 @@ export default function DeployPage() {
     })
 
     return () => subscription.unsubscribe()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reposFetched])
 
   const signInWithGitHub = async () => {
@@ -477,7 +478,7 @@ export default function DeployPage() {
                       onChange={(e) => setExampleInput(e.target.value)}
                       className="w-full bg-neutral-700 text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#63f2d2]"
                       rows={4}
-                      placeholder='{"text": "Hello world", "language": "en"}'
+                      placeholder='{&quot;text&quot;: &quot;Hello world&quot;, &quot;language&quot;: &quot;en&quot;}'
                     />
                   </div>
                   
@@ -488,7 +489,7 @@ export default function DeployPage() {
                       onChange={(e) => setExampleOutput(e.target.value)}
                       className="w-full bg-neutral-700 text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-[#63f2d2]"
                       rows={4}
-                      placeholder='{"result": "Processed text", "confidence": 0.95}'
+                      placeholder='{&quot;result&quot;: &quot;Processed text&quot;, &quot;confidence&quot;: 0.95}'
                     />
                   </div>
                 </div>
@@ -635,7 +636,7 @@ export default function DeployPage() {
         ) : repos.length === 0 ? (
           <div className="text-center text-neutral-400">
             <p>No repositories found.</p>
-            <p className="text-sm mt-2">Make sure you're signed in with GitHub and have repositories.</p>
+            <p className="text-sm mt-2">Make sure you&apos;re signed in with GitHub and have repositories.</p>
             <button 
               onClick={fetchRepos}
               className="mt-4 bg-neutral-700 text-white px-4 py-2 rounded hover:bg-neutral-600"
