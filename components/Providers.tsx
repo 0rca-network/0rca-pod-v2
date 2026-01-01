@@ -1,26 +1,25 @@
 "use client"
 
 import type React from "react"
-import { NetworkId, WalletId, WalletManager, WalletProvider } from "@txnlab/use-wallet-react"
+import { PrivyProvider } from "@privy-io/react-auth"
 import { ToastContainer } from "react-toastify"
 import "react-toastify/dist/ReactToastify.css"
 
-const walletManager = new WalletManager({
-  wallets: [
-    WalletId.DEFLY,
-    WalletId.PERA,
-    WalletId.EXODUS,
-    {
-      id: WalletId.LUTE,
-      options: { siteName: "0rca POD Cronos" },
-    },
-  ],
-  defaultNetwork: NetworkId.TESTNET,
-})
-
 export function Providers({ children }: { children: React.ReactNode }) {
+  // Replace this with your actual App ID from the Privy Dashboard
+  const appId = process.env.NEXT_PUBLIC_PRIVY_APP_ID || ""
+
   return (
-    <WalletProvider manager={walletManager}>
+    <PrivyProvider
+      appId={appId}
+      config={{
+        appearance: {
+          theme: "dark",
+          accentColor: "#676FFF",
+          logo: "https://auth.privy.io/logos/privy-logo.png",
+        },
+      }}
+    >
       {children}
       <ToastContainer
         position="top-right"
@@ -34,6 +33,6 @@ export function Providers({ children }: { children: React.ReactNode }) {
         pauseOnHover
         theme="dark"
       />
-    </WalletProvider>
+    </PrivyProvider>
   )
 }

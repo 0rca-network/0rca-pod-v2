@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
-import { useWallet } from '@txnlab/use-wallet-react';
-import algosdk from 'algosdk';
+// import { useWallet } from '@txnlab/use-wallet-react';
+// import algosdk from 'algosdk';
+import { usePrivy } from "@privy-io/react-auth";
 import { GenerativeThumbnail } from '@/components/GenerativeThumbnail';
 import { DemoInputModal } from '@/components/DemoInputModal';
 
@@ -12,7 +13,9 @@ export default function AgentDetail() {
   const [showModal, setShowModal] = useState(false);
   const [agent, setAgent] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const { activeAccount, signTransactions, algodClient } = useWallet();
+  const { user: privyUser } = usePrivy()
+  const activeAccount = privyUser?.wallet ? { address: privyUser.wallet.address } : null
+  // const { activeAccount, signTransactions, algodClient } = useWallet();
 
   useEffect(() => {
     if (agentId) {
@@ -35,6 +38,8 @@ export default function AgentDetail() {
   };
 
   const handleHire = async () => {
+    alert("Hiring agents on blockchain is temporarily disabled during migration.");
+    /*
     if (!activeAccount || !agent?.subdomain) return;
     
     try {
@@ -155,7 +160,9 @@ const signedTxns = signed.filter((txn): txn is Uint8Array => txn !== null);
       console.error('Error hiring agent:', error);
       alert('Failed to hire agent: ' + error);
     }
+    */
   };
+
 
   return (
     <div className="space-y-8">
@@ -197,13 +204,12 @@ const signedTxns = signed.filter((txn): txn is Uint8Array => txn !== null);
             >
               Free Demo
             </button>
-            <button 
+            <button
               onClick={handleHire}
-              className={`px-6 py-3 rounded-lg font-semibold transition-all ${
-                activeAccount 
-                  ? 'bg-mint-glow text-black hover:opacity-90' 
-                  : 'bg-neutral-700 text-neutral-400 cursor-not-allowed'
-              }`}
+              className={`px-6 py-3 rounded-lg font-semibold transition-all ${activeAccount
+                ? 'bg-mint-glow text-black hover:opacity-90'
+                : 'bg-neutral-700 text-neutral-400 cursor-not-allowed'
+                }`}
               disabled={!activeAccount}
               title={!activeAccount ? 'Connect wallet to hire agent' : ''}
             >
