@@ -14,7 +14,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       appId={appId}
       config={{
         appearance: {
-          theme: "dark",
+          theme: "light",
           accentColor: "#676FFF",
           logo: "https://auth.privy.io/logos/privy-logo.png",
         },
