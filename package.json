@@ -18,7 +18,8 @@
     "next": "^15.1.3",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "react-toastify": "^11.0.5"
+    "react-toastify": "^11.0.5",
+    "@solana-program/system": "^0.10.0"
   },
   "devDependencies": {
     "@types/jest": "^29.5.0",
@@ -40,7 +41,6 @@
     "@solana-program/instructions": "*",
     "@solana-program/keys": "*",
     "@solana-program/message": "*",
-    "@solana-program/system": "^0.10.0",
     "@solana-program/transactions": "*",
     "@solana/accounts": "^5.1.0",
     "@solana/codecs-core": "^5.1.0",
