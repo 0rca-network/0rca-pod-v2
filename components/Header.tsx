@@ -33,9 +33,9 @@ export const Header = () => {
         </nav>
 
         <div className="flex items-center gap-6">
-          <button className="hidden sm:block px-8 py-3 rounded-full bg-white text-black text-xs font-black uppercase tracking-widest hover:bg-mint-glow hover:scale-105 transition-all active:scale-95 shadow-[0_0_20px_rgba(255,255,255,0.1)]">
-            Launch App
-          </button>
+          <Link href="/create" className="hidden sm:block px-8 py-3 rounded-full bg-white text-black text-xs font-black uppercase tracking-widest hover:bg-mint-glow hover:scale-105 transition-all active:scale-95 shadow-[0_0_20px_rgba(255,255,255,0.1)]">
+            Create Agent
+          </Link>
         </div>
       </div>
     </header>
