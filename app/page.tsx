@@ -23,68 +23,75 @@ export default async function Home() {
 
             <Hero />
 
-            {/* Trust Bar */}
-            <div className="border-y border-white/5 bg-white/[0.02] py-8 overflow-hidden">
-                <div className="container mx-auto px-4 flex flex-wrap justify-center items-center gap-12 opacity-30 grayscale hover:grayscale-0 transition-all duration-700">
-                    <span className="text-xl font-black tracking-widest uppercase">Cronos</span>
-                    <span className="text-xl font-black tracking-widest uppercase">Ethereum</span>
-                    <span className="text-xl font-black tracking-widest uppercase">Solana</span>
-                    <span className="text-xl font-black tracking-widest uppercase">Base</span>
-                    <span className="text-xl font-black tracking-widest uppercase">Polygon</span>
+            {/* Trust Bar - Massive spacing fix */}
+            <div className="border-y border-white/5 bg-white/[0.02] py-16 overflow-hidden">
+                <div className="container mx-auto px-4">
+                    <div className="flex flex-wrap justify-center items-center gap-x-20 gap-y-8 opacity-20 grayscale hover:grayscale-0 transition-all duration-700">
+                        <span className="text-2xl font-black tracking-[0.4em] uppercase whitespace-nowrap">Cronos</span>
+                        <span className="w-2 h-2 rounded-full bg-white/20 hidden md:block" />
+                        <span className="text-2xl font-black tracking-[0.4em] uppercase whitespace-nowrap">Ethereum</span>
+                        <span className="w-2 h-2 rounded-full bg-white/20 hidden md:block" />
+                        <span className="text-2xl font-black tracking-[0.4em] uppercase whitespace-nowrap">Solana</span>
+                        <span className="w-2 h-2 rounded-full bg-white/20 hidden md:block" />
+                        <span className="text-2xl font-black tracking-[0.4em] uppercase whitespace-nowrap">Base</span>
+                        <span className="w-2 h-2 rounded-full bg-white/20 hidden md:block" />
+                        <span className="text-2xl font-black tracking-[0.4em] uppercase whitespace-nowrap">Polygon</span>
+                    </div>
                 </div>
             </div>
 
-            {/* Stats/Value Section */}
-            <section className="py-32 relative overflow-hidden">
+            {/* Stats Section - Increased Padding */}
+            <section className="py-60 relative overflow-hidden">
                 <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-mint-glow/20 to-transparent" />
                 <div className="container mx-auto px-4">
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-16 text-center">
-                        <div className="space-y-4">
-                            <div className="text-5xl md:text-7xl font-black font-outfit text-white">61<span className="text-mint-glow">+</span></div>
-                            <div className="text-sm font-bold uppercase tracking-[0.3em] text-neutral-500">Active Agents</div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-24 text-center">
+                        <div className="space-y-6">
+                            <div className="text-6xl md:text-8xl font-black font-outfit text-white">61<span className="text-mint-glow">+</span></div>
+                            <div className="text-xs font-black uppercase tracking-[0.5em] text-neutral-600">Active Agents</div>
                         </div>
-                        <div className="space-y-4">
-                            <div className="text-5xl md:text-7xl font-black font-outfit text-white">218<span className="text-mint-glow">+</span></div>
-                            <div className="text-sm font-bold uppercase tracking-[0.3em] text-neutral-500">Integrations</div>
+                        <div className="space-y-6">
+                            <div className="text-6xl md:text-8xl font-black font-outfit text-white">218<span className="text-mint-glow">+</span></div>
+                            <div className="text-xs font-black uppercase tracking-[0.5em] text-neutral-600">Integrations</div>
                         </div>
-                        <div className="space-y-4">
-                            <div className="text-5xl md:text-7xl font-black font-outfit text-white">157<span className="text-mint-glow">+</span></div>
-                            <div className="text-sm font-bold uppercase tracking-[0.3em] text-neutral-500">Developers</div>
+                        <div className="space-y-6">
+                            <div className="text-6xl md:text-8xl font-black font-outfit text-white">157<span className="text-mint-glow">+</span></div>
+                            <div className="text-xs font-black uppercase tracking-[0.5em] text-neutral-600">Developers</div>
                         </div>
                     </div>
                 </div>
             </section>
 
-            {/* Features Section */}
-            <section className="py-32 bg-[#050505]">
+            {/* Features Section - Massive Spacing & Layout fix */}
+            <section className="py-60 bg-[#050505] relative">
+                <div className="absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-black to-transparent" />
                 <div className="container mx-auto px-4">
-                    <div className="max-w-4xl mx-auto text-center mb-24">
-                        <div className="inline-block px-4 py-1.5 rounded-full bg-mint-glow/10 border border-mint-glow/20 text-mint-glow text-[10px] font-black uppercase tracking-[0.2em] mb-6">
+                    <div className="max-w-5xl mx-auto text-center mb-40">
+                        <div className="inline-block px-5 py-2 rounded-full bg-mint-glow/5 border border-mint-glow/10 text-mint-glow text-[10px] font-black uppercase tracking-[0.4em] mb-10">
                             Core Protocol
                         </div>
-                        <h2 className="text-5xl md:text-7xl font-bold mb-8 font-outfit tracking-tight">
-                            Powering the <span className="text-transparent bg-clip-text bg-gradient-to-r from-mint-glow to-blue-400">Agentic Era</span>
+                        <h2 className="text-6xl md:text-9xl font-bold mb-12 font-outfit tracking-tighter leading-none">
+                            Powering the <br /><span className="text-transparent bg-clip-text bg-gradient-to-r from-mint-glow via-blue-400 to-purple-500 italic">Agentic Era</span>
                         </h2>
-                        <p className="text-neutral-500 text-xl leading-relaxed">
+                        <p className="text-neutral-500 text-2xl font-light leading-relaxed max-w-3xl mx-auto">
                             Unlock a world of autonomous possibilities with our cutting-edge agent management protocol.
                         </p>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-12">
                         <FeatureCard
-                            icon={<Zap size={32} />}
+                            icon={<Zap size={40} />}
                             title="X402 Payments"
                             desc="Hyper-efficient micro-transactions scaled for sub-second agent processing."
                             color="text-mint-glow"
                         />
                         <FeatureCard
-                            icon={<Layers size={32} />}
+                            icon={<Layers size={40} />}
                             title="A2A Standards"
                             desc="Universal communication layer allowing disparate agents to work as one."
                             color="text-blue-400"
                         />
                         <FeatureCard
-                            icon={<Cpu size={32} />}
+                            icon={<Cpu size={40} />}
                             title="MCP Native"
                             desc="Deep integration with Model Context Protocol for boundless tool access."
                             color="text-purple-400"
@@ -93,25 +100,25 @@ export default async function Home() {
                 </div>
             </section>
 
-            {/* Featured Agents Section */}
-            <section className="py-32">
+            {/* Featured Agents Section - High Spacing */}
+            <section className="py-60">
                 <div className="container mx-auto px-4">
-                    <div className="flex flex-col md:flex-row justify-between items-end mb-20 gap-8">
-                        <div className="max-w-2xl">
-                            <h2 className="text-4xl md:text-6xl font-bold mb-6 font-outfit tracking-tight">Trending <span className="text-mint-glow">Agents</span></h2>
-                            <p className="text-neutral-400 text-lg">
+                    <div className="flex flex-col md:flex-row justify-between items-end mb-32 gap-16">
+                        <div className="max-w-2xl space-y-6">
+                            <h2 className="text-5xl md:text-8xl font-black mb-6 font-outfit tracking-tighter leading-none">Trending <br /><span className="text-mint-glow italic">Agents</span></h2>
+                            <p className="text-neutral-400 text-xl font-light leading-relaxed">
                                 The most reliable and frequently utilized agents in the ecosystem.
                             </p>
                         </div>
                         <Link
                             href="/agents"
-                            className="group flex items-center gap-3 px-8 py-4 bg-neutral-900 border border-neutral-800 rounded-full text-sm font-bold uppercase tracking-widest hover:bg-neutral-800 transition-all active:scale-95"
+                            className="group flex items-center gap-6 px-12 py-6 bg-white text-black rounded-full text-xs font-black uppercase tracking-[0.3em] hover:bg-mint-glow transition-all active:scale-95 shadow-2xl"
                         >
-                            All Agents <ArrowRight size={18} className="text-mint-glow group-hover:translate-x-1 transition-transform" />
+                            All Agents <ArrowRight size={20} className="group-hover:translate-x-3 transition-transform" />
                         </Link>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-12">
                         {featuredAgents?.map((agent, index) => (
                             <AgentCard
                                 key={agent.id}
@@ -128,23 +135,23 @@ export default async function Home() {
                 </div>
             </section>
 
-            {/* Bottom CTA */}
-            <section className="py-40 relative">
+            {/* Bottom CTA - Absolute Spacing */}
+            <section className="py-60 relative">
                 <div className="container mx-auto px-4">
-                    <div className="relative rounded-[4rem] overflow-hidden bg-gradient-to-br from-neutral-900 to-black p-12 md:p-32 border border-white/5">
-                        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-10" />
-                        <div className="relative z-10 text-center max-w-4xl mx-auto">
-                            <h2 className="text-5xl md:text-8xl font-black mb-10 font-outfit tracking-tighter">
-                                START <span className="text-mint-glow italic">BUILDING</span> TODAY.
+                    <div className="relative rounded-[5rem] overflow-hidden bg-gradient-to-br from-neutral-900 to-black p-16 md:p-40 border border-white/5 shadow-2xl">
+                        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-5" />
+                        <div className="relative z-10 text-center max-w-5xl mx-auto space-y-16">
+                            <h2 className="text-6xl md:text-[10rem] font-black mb-10 font-outfit tracking-tighter leading-[0.8]">
+                                START <br /><span className="text-mint-glow italic">BUILDING</span> TODAY.
                             </h2>
-                            <p className="text-neutral-500 text-2xl mb-16 leading-relaxed bg-black/40 backdrop-blur-sm p-4 rounded-3xl inline-block">
+                            <p className="text-neutral-500 text-3xl font-light leading-relaxed">
                                 Deploy your first agent in under 5 minutes.
                             </p>
-                            <div className="flex flex-col sm:flex-row justify-center gap-8">
-                                <Link href="/agents" className="px-12 py-6 bg-mint-glow text-black font-black text-xl rounded-full hover:scale-105 hover:shadow-[0_0_40px_rgba(99,242,210,0.4)] transition-all">
+                            <div className="flex flex-col sm:flex-row justify-center gap-12 pt-10">
+                                <Link href="/agents" className="px-16 py-8 bg-mint-glow text-black font-black text-2xl rounded-full hover:scale-105 hover:shadow-[0_0_60px_rgba(99,242,210,0.3)] transition-all">
                                     EXPLORE DIRECTORY
                                 </Link>
-                                <button className="px-12 py-6 bg-transparent border-2 border-white/20 text-white font-black text-xl rounded-full hover:bg-white hover:text-black hover:border-white transition-all">
+                                <button className="px-16 py-8 bg-transparent border-2 border-white/10 text-white font-black text-2xl rounded-full hover:bg-white hover:text-black hover:border-white transition-all">
                                     JOIN ECOSYSTEM
                                 </button>
                             </div>
@@ -153,15 +160,15 @@ export default async function Home() {
                 </div>
             </section>
 
-            <footer className="py-20 border-t border-white/5 bg-[#030303]">
-                <div className="container mx-auto px-4 text-center space-y-8">
-                    <div className="text-2xl font-black tracking-tighter">0RCA<span className="text-mint-glow">POD</span></div>
-                    <div className="flex justify-center gap-10 text-xs font-bold uppercase tracking-widest text-neutral-600">
+            <footer className="py-40 border-t border-white/5 bg-[#030303]">
+                <div className="container mx-auto px-4 text-center space-y-12">
+                    <div className="text-3xl font-black tracking-tighter">0RCA<span className="text-mint-glow">POD</span></div>
+                    <div className="flex justify-center gap-16 text-[10px] font-black uppercase tracking-[0.5em] text-neutral-600">
                         <a href="#" className="hover:text-white transition-colors">Twitter</a>
                         <a href="#" className="hover:text-white transition-colors">GitHub</a>
                         <a href="#" className="hover:text-white transition-colors">Discord</a>
                     </div>
-                    <div className="text-[10px] font-medium text-neutral-800 tracking-[0.4em] uppercase">
+                    <div className="text-[10px] font-medium text-neutral-800 tracking-[0.6em] uppercase pt-10">
                         © 2026 0rca Pod Protocol • Empowering Autonomous Agents
                     </div>
                 </div>
@@ -172,12 +179,12 @@ export default async function Home() {
 
 function FeatureCard({ icon, title, desc, color }: { icon: any, title: string, desc: string, color: string }) {
     return (
-        <div className="group p-10 rounded-[2.5rem] bg-[#0A0A0A] border border-neutral-800/50 hover:border-mint-glow/30 transition-all duration-500 hover:y-[-10px]">
-            <div className={`mb-8 ${color} opacity-80 group-hover:scale-110 group-hover:opacity-100 transition-all duration-500`}>
+        <div className="group p-14 rounded-[3rem] bg-[#0A0A0A] border border-neutral-800/50 hover:border-mint-glow/30 transition-all duration-700 hover:-translate-y-4 shadow-xl">
+            <div className={`mb-10 ${color} opacity-70 group-hover:scale-110 group-hover:opacity-100 transition-all duration-700`}>
                 {icon}
             </div>
-            <h3 className="text-2xl font-bold mb-4 font-outfit">{title}</h3>
-            <p className="text-neutral-500 leading-relaxed group-hover:text-neutral-400 transition-colors">
+            <h3 className="text-3xl font-bold mb-6 font-outfit">{title}</h3>
+            <p className="text-neutral-500 text-lg leading-relaxed group-hover:text-neutral-300 transition-colors">
                 {desc}
             </p>
         </div>

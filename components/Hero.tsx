@@ -21,7 +21,7 @@ export const Hero = () => {
 
             <motion.div
                 style={{ y: y1, opacity }}
-                className="relative z-10 text-center max-w-6xl mx-auto space-y-12"
+                className="relative z-10 text-center max-w-6xl mx-auto space-y-12 pt-20"
             >
                 <motion.div
                     initial={{ opacity: 0, scale: 0.9 }}
@@ -37,10 +37,10 @@ export const Hero = () => {
                     initial={{ opacity: 0, y: 40 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 1, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
-                    className="text-7xl md:text-[10rem] font-black tracking-tighter leading-[0.85] font-outfit"
+                    className="text-6xl md:text-[8.5rem] font-black tracking-tighter leading-[0.8] font-outfit"
                 >
                     <span className="block text-white">DISCOVER</span>
-                    <span className="block text-transparent bg-clip-text bg-gradient-to-r from-mint-glow via-blue-400 to-purple-500 italic py-2">
+                    <span className="block text-transparent bg-clip-text bg-gradient-to-r from-mint-glow via-blue-400 to-purple-500 italic py-4">
                         AI AGENTS
                     </span>
                 </motion.h1>
