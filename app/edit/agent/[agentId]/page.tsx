@@ -107,9 +107,8 @@ export default function EditAgentPage() {
         const fetchBalance = async () => {
             if (wallet && wallet.address) {
                 try {
-                    const provider = await wallet.getEthereumProvider();
-                    const browserProvider = new ethers.BrowserProvider(provider);
-                    const bal = await browserProvider.getBalance(wallet.address);
+                    const provider = new ethers.JsonRpcProvider("https://evm-t3.cronos.org");
+                    const bal = await provider.getBalance(wallet.address);
                     setBalance(ethers.formatEther(bal));
                 } catch (err) {
                     console.error("Error fetching balance:", err);
@@ -131,9 +130,36 @@ export default function EditAgentPage() {
         const idToast = toast.loading("Registering agent on Cronos Testnet...");
 
         try {
+            // Ensure we are on Cronos Testnet (Chain ID 338)
+            const currentChainId = wallet.chainId.includes(':')
+                ? wallet.chainId.split(':')[1]
+                : wallet.chainId;
+
+            if (currentChainId !== '338') {
+                console.log("Switching to Cronos Testnet...");
+                try {
+                    await wallet.switchChain(338);
+                    // Wait a moment for provider to refresh after switch
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                } catch (switchError: any) {
+                    console.error("Failed to switch chain:", switchError);
+                    toast.error("Please switch your wallet to Cronos Testnet manually.");
+                    setIsPublishing(false);
+                    toast.dismiss(idToast);
+                    return;
+                }
+            }
+
+            // Get provider AFTER chain switch
             const provider = await wallet.getEthereumProvider();
             const browserProvider = new ethers.BrowserProvider(provider);
             const signer = await browserProvider.getSigner();
+
+            // Double check network on the provider itself
+            const network = await browserProvider.getNetwork();
+            if (network.chainId !== BigInt(338)) {
+                throw new Error(`Wallet is still on network ${network.chainId}. Please switch to Cronos Testnet (338).`);
+            }
 
             const registryAddress = CONTRACTS.cronosTestnet.identityRegistry;
             const abi = [
