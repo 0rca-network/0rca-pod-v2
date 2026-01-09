@@ -32,7 +32,6 @@ export default function Home() {
     const [featuredAgents, setFeaturedAgents] = useState<Agent[]>([]);
 
     useEffect(() => {
-        // Fetch agents client-side
         const fetchAgents = async () => {
             try {
                 const res = await fetch('/api/agents?limit=4');
@@ -54,50 +53,42 @@ export default function Home() {
                 <Hero />
             </section>
 
-            {/* Section 2: Stats + Trust */}
-            <section className="snap-start min-h-screen flex flex-col items-center justify-center px-4 relative">
-                <div className="absolute inset-0 bg-gradient-to-b from-black via-transparent to-black pointer-events-none" />
-
-                {/* Trust Bar */}
-                <motion.div
-                    initial="hidden"
-                    whileInView="visible"
-                    viewport={{ once: true, amount: 0.5 }}
-                    variants={fadeInUp}
-                    className="absolute top-20 left-0 right-0 border-y border-white/5 bg-white/[0.01] py-6"
-                >
+            {/* Section 2: Stats */}
+            <section className="snap-start min-h-screen flex flex-col justify-center px-4 relative">
+                {/* Trust Bar at top of this section */}
+                <div className="absolute top-0 left-0 right-0 border-b border-white/5 bg-white/[0.01] py-6">
                     <div className="container mx-auto px-4">
-                        <div className="flex flex-wrap justify-center items-center gap-x-12 gap-y-4 opacity-20">
-                            <span className="text-sm font-black tracking-[0.5em] uppercase">Cronos</span>
-                            <span className="w-1 h-1 rounded-full bg-white/30 hidden md:block" />
-                            <span className="text-sm font-black tracking-[0.5em] uppercase">Ethereum</span>
-                            <span className="w-1 h-1 rounded-full bg-white/30 hidden md:block" />
-                            <span className="text-sm font-black tracking-[0.5em] uppercase">Solana</span>
-                            <span className="w-1 h-1 rounded-full bg-white/30 hidden md:block" />
-                            <span className="text-sm font-black tracking-[0.5em] uppercase">Base</span>
-                            <span className="w-1 h-1 rounded-full bg-white/30 hidden md:block" />
-                            <span className="text-sm font-black tracking-[0.5em] uppercase">Polygon</span>
+                        <div className="flex flex-wrap justify-center items-center gap-x-12 gap-y-3 opacity-20">
+                            <span className="text-xs font-black tracking-[0.4em] uppercase">Cronos</span>
+                            <span className="w-1 h-1 rounded-full bg-white/40 hidden md:block" />
+                            <span className="text-xs font-black tracking-[0.4em] uppercase">Ethereum</span>
+                            <span className="w-1 h-1 rounded-full bg-white/40 hidden md:block" />
+                            <span className="text-xs font-black tracking-[0.4em] uppercase">Solana</span>
+                            <span className="w-1 h-1 rounded-full bg-white/40 hidden md:block" />
+                            <span className="text-xs font-black tracking-[0.4em] uppercase">Base</span>
+                            <span className="w-1 h-1 rounded-full bg-white/40 hidden md:block" />
+                            <span className="text-xs font-black tracking-[0.4em] uppercase">Polygon</span>
                         </div>
                     </div>
-                </motion.div>
+                </div>
 
-                {/* Stats */}
+                {/* Stats centered */}
                 <motion.div
                     initial="hidden"
                     whileInView="visible"
                     viewport={{ once: true, amount: 0.5 }}
                     variants={staggerContainer}
-                    className="container mx-auto grid grid-cols-1 md:grid-cols-3 gap-12 text-center"
+                    className="container mx-auto grid grid-cols-1 md:grid-cols-3 gap-16 text-center"
                 >
-                    <motion.div variants={fadeInUp} className="space-y-3">
+                    <motion.div variants={fadeInUp} className="space-y-4">
                         <div className="text-6xl md:text-8xl font-black font-outfit text-white">61<span className="text-mint-glow">+</span></div>
                         <div className="text-[10px] font-black uppercase tracking-[0.5em] text-neutral-600">Active Agents</div>
                     </motion.div>
-                    <motion.div variants={fadeInUp} className="space-y-3">
+                    <motion.div variants={fadeInUp} className="space-y-4">
                         <div className="text-6xl md:text-8xl font-black font-outfit text-white">218<span className="text-mint-glow">+</span></div>
                         <div className="text-[10px] font-black uppercase tracking-[0.5em] text-neutral-600">Integrations</div>
                     </motion.div>
-                    <motion.div variants={fadeInUp} className="space-y-3">
+                    <motion.div variants={fadeInUp} className="space-y-4">
                         <div className="text-6xl md:text-8xl font-black font-outfit text-white">157<span className="text-mint-glow">+</span></div>
                         <div className="text-[10px] font-black uppercase tracking-[0.5em] text-neutral-600">Developers</div>
                     </motion.div>
@@ -106,10 +97,10 @@ export default function Home() {
 
             {/* Section 3: Features */}
             <section className="snap-start min-h-screen flex flex-col items-center justify-center bg-[#030303] px-4 relative">
-                <div className="absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-black to-transparent" />
-                <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-black to-transparent" />
+                <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-black to-transparent" />
+                <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-black to-transparent" />
 
-                <div className="container mx-auto max-w-6xl">
+                <div className="container mx-auto max-w-6xl relative z-10">
                     {/* Header */}
                     <motion.div
                         initial="hidden"
@@ -188,47 +179,53 @@ export default function Home() {
                 </div>
             </section>
 
-            {/* Section 5: CTA */}
-            <section className="snap-start min-h-screen flex flex-col items-center justify-center px-4">
-                <motion.div
-                    initial="hidden"
-                    whileInView="visible"
-                    viewport={{ once: true, amount: 0.5 }}
-                    variants={fadeInUp}
-                    className="container mx-auto max-w-5xl"
-                >
-                    <div className="relative rounded-[2rem] md:rounded-[3rem] overflow-hidden bg-gradient-to-br from-neutral-900 to-black p-10 md:p-20 lg:p-28 border border-white/5">
-                        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-5" />
-                        <div className="relative z-10 text-center space-y-8">
-                            <h2 className="text-4xl md:text-7xl lg:text-8xl font-black font-outfit tracking-tighter leading-[0.85]">
-                                START <br /><span className="text-mint-glow italic">BUILDING</span> TODAY.
-                            </h2>
-                            <p className="text-neutral-500 text-lg md:text-xl font-light">
-                                Deploy your first agent in under 5 minutes.
-                            </p>
-                            <div className="flex flex-col sm:flex-row justify-center gap-4 pt-4">
-                                <Link href="/agents" className="px-8 py-4 bg-mint-glow text-black font-black text-base rounded-full hover:scale-105 transition-all">
-                                    EXPLORE DIRECTORY
-                                </Link>
-                                <button className="px-8 py-4 bg-transparent border-2 border-white/10 text-white font-black text-base rounded-full hover:bg-white hover:text-black transition-all">
-                                    JOIN ECOSYSTEM
-                                </button>
+            {/* Section 5: CTA + Footer */}
+            <section className="snap-start min-h-screen flex flex-col">
+                {/* CTA - takes most of the space */}
+                <div className="flex-1 flex items-center justify-center px-4">
+                    <motion.div
+                        initial="hidden"
+                        whileInView="visible"
+                        viewport={{ once: true, amount: 0.5 }}
+                        variants={fadeInUp}
+                        className="container mx-auto max-w-5xl"
+                    >
+                        <div className="relative rounded-[2rem] md:rounded-[3rem] overflow-hidden bg-gradient-to-br from-neutral-900 to-black p-10 md:p-20 lg:p-28 border border-white/5">
+                            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-5" />
+                            <div className="relative z-10 text-center space-y-8">
+                                <h2 className="text-4xl md:text-7xl lg:text-8xl font-black font-outfit tracking-tighter leading-[0.85]">
+                                    START <br /><span className="text-mint-glow italic">BUILDING</span> TODAY.
+                                </h2>
+                                <p className="text-neutral-500 text-lg md:text-xl font-light">
+                                    Deploy your first agent in under 5 minutes.
+                                </p>
+                                <div className="flex flex-col sm:flex-row justify-center gap-4 pt-4">
+                                    <Link href="/agents" className="px-8 py-4 bg-mint-glow text-black font-black text-base rounded-full hover:scale-105 transition-all">
+                                        EXPLORE DIRECTORY
+                                    </Link>
+                                    <button className="px-8 py-4 bg-transparent border-2 border-white/10 text-white font-black text-base rounded-full hover:bg-white hover:text-black transition-all">
+                                        JOIN ECOSYSTEM
+                                    </button>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                </motion.div>
+                    </motion.div>
+                </div>
 
-                {/* Footer inside CTA section */}
-                <div className="absolute bottom-0 left-0 right-0 py-8 border-t border-white/5 bg-black/50 backdrop-blur-sm">
-                    <div className="container mx-auto px-4 text-center">
+                {/* Footer - at bottom of this section */}
+                <footer className="py-10 border-t border-white/5 bg-[#020202]">
+                    <div className="container mx-auto px-4 text-center space-y-5">
                         <div className="text-xl font-black tracking-tighter">0RCA<span className="text-mint-glow">POD</span></div>
-                        <div className="flex justify-center gap-8 text-[9px] font-bold uppercase tracking-[0.3em] text-neutral-600 mt-3">
+                        <div className="flex justify-center gap-10 text-[9px] font-bold uppercase tracking-[0.4em] text-neutral-600">
                             <a href="#" className="hover:text-white transition-colors">Twitter</a>
                             <a href="#" className="hover:text-white transition-colors">GitHub</a>
                             <a href="#" className="hover:text-white transition-colors">Discord</a>
                         </div>
+                        <div className="text-[9px] text-neutral-800 tracking-[0.4em] uppercase">
+                            © 2026 0rca Pod Protocol
+                        </div>
                     </div>
-                </div>
+                </footer>
             </section>
         </div>
     );
@@ -250,4 +247,3 @@ function FeatureCard({ icon, title, desc, color }: { icon: any, title: string, d
         </motion.div>
     )
 }
-

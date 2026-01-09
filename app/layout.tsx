@@ -11,6 +11,7 @@ export const metadata = {
 };
 
 import { Header } from '@/components/Header';
+import { Providers } from '@/components/Providers';
 
 export default function RootLayout({
   children,
@@ -20,10 +21,12 @@ export default function RootLayout({
   return (
     <html lang="en" className={clsx(inter.variable, outfit.variable)} style={{ scrollBehavior: 'smooth' }}>
       <body className="bg-black text-white min-h-screen selection:bg-mint-glow selection:text-black antialiased overflow-x-hidden">
-        <Header />
-        <div className="flex flex-col min-h-screen">
-          {children}
-        </div>
+        <Providers>
+          <Header />
+          <div className="flex flex-col min-h-screen">
+            {children}
+          </div>
+        </Providers>
       </body>
     </html>
   );
