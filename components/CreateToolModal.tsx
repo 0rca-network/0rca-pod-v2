@@ -33,6 +33,7 @@ interface Parameter {
 interface Tool {
   name: string;
   description: string;
+  baseUrl: string;
   endpoint: string;
   method: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
   parameters: Parameter[];
@@ -60,6 +61,7 @@ export const CreateToolModal: React.FC<CreateToolModalProps> = ({
   const [tool, setTool] = useState<Tool>({
     name: '',
     description: '',
+    baseUrl: 'http://localhost:80',
     endpoint: '/api',
     method: 'GET',
     parameters: [],
@@ -70,6 +72,7 @@ export const CreateToolModal: React.FC<CreateToolModalProps> = ({
   });
 
   const httpMethods = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'];
+  const paramTypes = ['string', 'number', 'boolean', 'object', 'array'];
 
   const addParameter = () => {
     setTool({
@@ -78,6 +81,19 @@ export const CreateToolModal: React.FC<CreateToolModalProps> = ({
         ...tool.parameters,
         { name: '', type: 'string', required: false, description: '', location: activeParamTab }
       ]
+    });
+  };
+
+  const updateParameter = (index: number, updates: Partial<Parameter>) => {
+    const newParams = [...tool.parameters];
+    newParams[index] = { ...newParams[index], ...updates };
+    setTool({ ...tool, parameters: newParams });
+  };
+
+  const removeParameter = (index: number) => {
+    setTool({
+      ...tool,
+      parameters: tool.parameters.filter((_, i) => i !== index)
     });
   };
 
@@ -162,7 +178,7 @@ export const CreateToolModal: React.FC<CreateToolModalProps> = ({
                     type="number"
                     value={tool.price}
                     onChange={(e) => setTool({ ...tool, price: Number(e.target.value) })}
-                    className="flex-1 bg-transparent text-sm focus:outline-none"
+                    className="flex-1 bg-transparent text-sm focus:outline-none placeholder:text-neutral-700"
                     placeholder="0"
                   />
                   <div className="h-4 w-[1px] bg-white/10 mx-1" />
@@ -197,7 +213,7 @@ export const CreateToolModal: React.FC<CreateToolModalProps> = ({
                   Input schema or url to create a tool. Enter the URL or schema and let Tars help you complete the configuration
                 </p>
                 <textarea
-                  className="w-full h-32 bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-xs text-neutral-400 resize-none focus:outline-none focus:border-mint-glow/30"
+                  className="w-full h-32 bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-xs text-neutral-400 resize-none focus:outline-none focus:border-mint-glow/30 placeholder:text-neutral-700"
                   placeholder="Paste URL or schema here..."
                 />
               </div>
@@ -208,7 +224,7 @@ export const CreateToolModal: React.FC<CreateToolModalProps> = ({
                 <textarea
                   value={tool.description}
                   onChange={(e) => setTool({ ...tool, description: e.target.value })}
-                  className="w-full h-24 bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm text-neutral-300 resize-none focus:outline-none focus:border-mint-glow/30"
+                  className="w-full h-24 bg-black/40 border border-white/10 rounded-xl px-4 py-3 text-sm text-neutral-300 resize-none focus:outline-none focus:border-mint-glow/30 placeholder:text-neutral-700"
                   placeholder="What does this tool do?"
                 />
               </div>
@@ -279,20 +295,21 @@ export const CreateToolModal: React.FC<CreateToolModalProps> = ({
                         onChange={(e) => setTool({ ...tool, method: e.target.value as any })}
                         className="appearance-none bg-black/40 border border-white/10 rounded-xl px-5 py-3.5 pr-10 text-xs font-black text-mint-glow focus:outline-none focus:border-mint-glow/30 transition-all cursor-pointer h-full"
                       >
-                        {httpMethods.map(m => <option key={m} value={m}>{m}</option>)}
+                        {httpMethods.map(m => <option key={m} className="bg-black" value={m}>{m}</option>)}
                       </select>
                       <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-500 pointer-events-none" />
                     </div>
 
-                    <div className="flex-1 flex items-stretch gap-2 bg-black/40 border border-white/10 rounded-xl px-4">
+                    <div className="flex-1 flex items-stretch gap-0 bg-black/40 border border-white/10 rounded-xl px-4 group focus-within:border-mint-glow/30 transition-all">
                       <input
-                        className="bg-transparent text-sm text-neutral-400 focus:outline-none w-[140px] text-center"
-                        defaultValue="http://localhost:80"
-                        readOnly
+                        className="bg-transparent text-sm text-neutral-300 font-mono focus:outline-none w-[200px] text-right"
+                        value={tool.baseUrl}
+                        onChange={(e) => setTool({ ...tool, baseUrl: e.target.value })}
+                        placeholder="http://base-url"
                       />
-                      <div className="w-[1px] h-6 self-center bg-white/10" />
+                      <div className="w-[1px] h-6 self-center bg-white/10 mx-4" />
                       <input
-                        className="flex-1 bg-transparent text-sm focus:outline-none px-4"
+                        className="flex-1 bg-transparent text-sm font-mono focus:outline-none placeholder:text-neutral-700"
                         value={tool.endpoint}
                         onChange={(e) => setTool({ ...tool, endpoint: e.target.value })}
                         placeholder="/api/example"
@@ -308,26 +325,99 @@ export const CreateToolModal: React.FC<CreateToolModalProps> = ({
                     <ChevronDown size={20} className="text-neutral-600" />
                   </div>
 
-                  <div className="flex bg-white/5 rounded-xl p-1 gap-1">
-                    {(['query', 'header', 'path', 'cookie', 'body'] as const).map(tab => (
-                      <button
-                        key={tab}
-                        onClick={() => setActiveParamTab(tab)}
-                        className={`px-4 py-2 rounded-lg text-[10px] font-bold capitalize transition-all ${activeParamTab === tab ? 'bg-[#1A1A1A] text-white' : 'text-neutral-500 hover:text-neutral-300'}`}
-                      >
-                        {tab === 'query' ? 'Query Params' : tab === 'header' ? 'Request Headers' : tab === 'path' ? 'Path Params' : tab === 'cookie' ? 'Cookie Params' : 'Body Params'}
-                      </button>
-                    ))}
+                  <div className="flex bg-white/5 rounded-xl p-1 gap-1 w-fit">
+                    {(['query', 'header', 'path', 'cookie', 'body'] as const).map(tab => {
+                      const count = tool.parameters.filter(p => p.location === tab).length;
+                      return (
+                        <button
+                          key={tab}
+                          onClick={() => setActiveParamTab(tab)}
+                          className={`px-4 py-2 rounded-lg text-[10px] font-bold capitalize transition-all flex items-center gap-2 ${activeParamTab === tab ? 'bg-[#1A1A1A] text-white shadow-lg' : 'text-neutral-500 hover:text-neutral-300'}`}
+                        >
+                          {tab === 'query' ? 'Query Params' : tab === 'header' ? 'Headers' : tab === 'path' ? 'Path' : tab === 'cookie' ? 'Cookie' : 'Body'}
+                          {count > 0 && <span className="bg-mint-glow/20 text-mint-glow px-1.5 py-0.5 rounded text-[8px]">{count}</span>}
+                        </button>
+                      );
+                    })}
                   </div>
 
                   <div className="space-y-4">
-                    {/* Parameter rows would go here */}
+                    {/* Headers for the list */}
+                    {tool.parameters.filter(p => p.location === activeParamTab).length > 0 && (
+                      <div className="grid grid-cols-12 gap-4 px-4 py-2 text-[10px] font-black uppercase text-neutral-500 tracking-widest bg-white/[0.02] rounded-lg">
+                        <div className="col-span-3">Name</div>
+                        <div className="col-span-2">Type</div>
+                        <div className="col-span-2 text-center">Required</div>
+                        <div className="col-span-4">Description</div>
+                        <div className="col-span-1"></div>
+                      </div>
+                    )}
+
+                    <div className="space-y-2">
+                      <AnimatePresence>
+                        {tool.parameters.map((param, idx) => (
+                          param.location === activeParamTab && (
+                            <motion.div
+                              key={idx}
+                              initial={{ opacity: 0, x: -10 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              exit={{ opacity: 0, x: 10 }}
+                              className="grid grid-cols-12 gap-4 px-4 py-3 bg-white/5 border border-white/5 rounded-xl items-center group"
+                            >
+                              <div className="col-span-3">
+                                <input
+                                  className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-mint-glow/30 transition-all font-medium"
+                                  value={param.name}
+                                  onChange={(e) => updateParameter(idx, { name: e.target.value })}
+                                  placeholder="param_name"
+                                />
+                              </div>
+                              <div className="col-span-2 relative">
+                                <select
+                                  className="w-full appearance-none bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-neutral-400 focus:outline-none focus:border-mint-glow/30 cursor-pointer"
+                                  value={param.type}
+                                  onChange={(e) => updateParameter(idx, { type: e.target.value as any })}
+                                >
+                                  {paramTypes.map(t => <option key={t} className="bg-black" value={t}>{t}</option>)}
+                                </select>
+                                <ChevronDown size={12} className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-600 pointer-events-none" />
+                              </div>
+                              <div className="col-span-2 flex justify-center">
+                                <button
+                                  onClick={() => updateParameter(idx, { required: !param.required })}
+                                  className={`w-8 h-4 rounded-full relative transition-colors duration-300 ${param.required ? 'bg-mint-glow' : 'bg-neutral-800'}`}
+                                >
+                                  <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all duration-300 ${param.required ? 'left-4.5 bg-black' : 'left-0.5'}`} />
+                                </button>
+                              </div>
+                              <div className="col-span-4">
+                                <input
+                                  className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-neutral-400 focus:outline-none focus:border-mint-glow/30 transition-all"
+                                  value={param.description}
+                                  onChange={(e) => updateParameter(idx, { description: e.target.value })}
+                                  placeholder="Describe this param"
+                                />
+                              </div>
+                              <div className="col-span-1 flex justify-end">
+                                <button
+                                  onClick={() => removeParameter(idx)}
+                                  className="p-2 text-neutral-600 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </div>
+                            </motion.div>
+                          )
+                        ))}
+                      </AnimatePresence>
+                    </div>
+
                     <button
                       onClick={addParameter}
-                      className="w-fit flex items-center gap-2 px-4 py-2.5 bg-white/5 border border-white/10 rounded-xl text-xs font-bold text-neutral-400 hover:text-white hover:bg-white/10 transition-all"
+                      className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-white/[0.03] border border-dashed border-white/10 rounded-xl text-xs font-bold text-neutral-500 hover:text-white hover:bg-white/5 hover:border-mint-glow/30 transition-all mt-2"
                     >
                       <Plus size={14} />
-                      Add Parameters
+                      Add Parameter to {activeParamTab.charAt(0).toUpperCase() + activeParamTab.slice(1)}
                     </button>
                   </div>
                 </section>
