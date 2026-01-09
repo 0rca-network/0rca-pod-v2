@@ -36,6 +36,10 @@ import {
 import Link from 'next/link';
 import { CreateToolModal } from '@/components/CreateToolModal';
 import { AddMCPModal } from '@/components/AddMCPModal';
+import { usePrivy, useWallets } from '@privy-io/react-auth';
+import { ethers } from 'ethers';
+import CONTRACTS from '@/lib/contracts.json';
+import { toast } from 'react-toastify';
 
 interface MCPServer {
     id: string;
@@ -91,6 +95,84 @@ export default function EditAgentPage() {
         { id: '1', text: 'Hello! I am your AI agent. How can I assist you today?', sender: 'agent', timestamp: new Date() }
     ]);
     const [chatInput, setChatInput] = useState('');
+    const [isPublishing, setIsPublishing] = useState(false);
+    const [balance, setBalance] = useState<string>('0.00');
+
+    // Privy & Wallet
+    const { user, authenticated } = usePrivy();
+    const { wallets } = useWallets();
+    const wallet = wallets[0];
+
+    useEffect(() => {
+        const fetchBalance = async () => {
+            if (wallet && wallet.address) {
+                try {
+                    const provider = await wallet.getEthereumProvider();
+                    const browserProvider = new ethers.BrowserProvider(provider);
+                    const bal = await browserProvider.getBalance(wallet.address);
+                    setBalance(ethers.formatEther(bal));
+                } catch (err) {
+                    console.error("Error fetching balance:", err);
+                }
+            }
+        };
+        fetchBalance();
+        const interval = setInterval(fetchBalance, 10000);
+        return () => clearInterval(interval);
+    }, [wallet]);
+
+    const handlePublish = async () => {
+        if (!authenticated || !wallet) {
+            toast.error("Please connect your wallet first");
+            return;
+        }
+
+        setIsPublishing(true);
+        const idToast = toast.loading("Registering agent on Cronos Testnet...");
+
+        try {
+            const provider = await wallet.getEthereumProvider();
+            const browserProvider = new ethers.BrowserProvider(provider);
+            const signer = await browserProvider.getSigner();
+
+            const registryAddress = CONTRACTS.cronosTestnet.identityRegistry;
+            const abi = [
+                "function register(string memory tokenUri) external returns (uint256 agentId)",
+                "event Registered(uint256 indexed agentId, string tokenURI, address indexed owner)"
+            ];
+
+            const contract = new ethers.Contract(registryAddress, abi, signer);
+
+            // Using agent name and mock URI for now as requested for production logic
+            const tx = await contract.register(JSON.stringify({
+                name: agentName,
+                description: backgroundSetting.slice(0, 100),
+                version: "1.0.0"
+            }));
+
+            toast.update(idToast, { render: "Waiting for transaction confirmation...", type: "info", isLoading: true });
+
+            const receipt = await tx.wait();
+            console.log("Transaction receipt:", receipt);
+
+            toast.update(idToast, {
+                render: `Successfully registered agent on-chain!`,
+                type: "success",
+                isLoading: false,
+                autoClose: 5000
+            });
+        } catch (error: any) {
+            console.error("Publish error:", error);
+            toast.update(idToast, {
+                render: `Registration failed: ${error.message || "Unknown error"}`,
+                type: "error",
+                isLoading: false,
+                autoClose: 5000
+            });
+        } finally {
+            setIsPublishing(false);
+        }
+    };
 
     const chatEndRef = useRef<HTMLDivElement>(null);
 
@@ -202,13 +284,29 @@ export default function EditAgentPage() {
                 </div>
 
                 <div className="flex items-center gap-4">
-                    <span className="text-[11px] text-neutral-500 font-mono hidden sm:block">draft auto-saved 13:16:45</span>
-                    <button className="p-2 hover:bg-white/5 rounded-lg transition-colors group relative" title="Save">
-                        <Save size={18} className="text-neutral-400 group-hover:text-white" />
-                    </button>
-                    <button className="flex items-center gap-2 px-5 py-2 bg-mint-glow text-black rounded-full text-xs font-black uppercase tracking-wider hover:brightness-110 active:scale-95 transition-all shadow-lg shadow-mint-glow/20">
-                        <Share2 size={14} />
-                        Publish
+                    <div className="flex flex-col items-end">
+                        <span className="text-[10px] font-black text-mint-glow tracking-widest uppercase mb-0.5">
+                            {balance} TCRO
+                        </span>
+                        <div className="flex items-center gap-2 px-3 py-1 bg-white/5 border border-white/10 rounded-full">
+                            <div className="w-1.5 h-1.5 rounded-full bg-mint-glow animate-pulse" />
+                            <span className="text-[10px] font-mono text-neutral-400">
+                                {wallet?.address ? `${wallet.address.slice(0, 6)}...${wallet.address.slice(-4)}` : 'No Wallet'}
+                            </span>
+                        </div>
+                    </div>
+                    <div className="h-8 w-[1px] bg-white/10 mx-1" />
+                    <button
+                        onClick={handlePublish}
+                        disabled={isPublishing}
+                        className={`flex items-center gap-2 px-5 py-2 bg-mint-glow text-black rounded-full text-xs font-black uppercase tracking-wider hover:brightness-110 active:scale-95 transition-all shadow-lg shadow-mint-glow/20 ${isPublishing ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                        {isPublishing ? (
+                            <div className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" />
+                        ) : (
+                            <Share2 size={14} />
+                        )}
+                        {isPublishing ? 'Publishing...' : 'Publish'}
                     </button>
                 </div>
             </header>

@@ -1,0 +1,13 @@
+{
+  "ganache": {
+    "identityRegistry": "0xb89178765AC871d4Eea4133b1865971B75076675",
+    "reputationRegistry": "0x7B9A91313bB68da225835ACd0963Eeb7dCE5400a",
+    "validationRegistry": "0xF26796c5792D12CD02608c3f3FD6624069795daa"
+  },
+  "cronosTestnet": {
+    "identityRegistry": "0xc3cEE1051DA82898e0ABfE43e637a548367A5cbE",
+    "reputationRegistry": "0x339FF3EDF4f15D64DD243Eec9f479dE7f6aB2727",
+    "validationRegistry": "0x388e21bD814372b62D03751fC9714328a9bA8332",
+    "contractRegistry": "0xFCE2F6392E668B7B7A2469c79B626036831803BA"
+  }
+}
