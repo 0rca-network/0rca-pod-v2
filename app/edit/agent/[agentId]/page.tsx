@@ -41,7 +41,11 @@ interface MCPServer {
     id: string;
     name: string;
     url: string;
-    tools: { name: string, description: string }[];
+    tools: {
+        name: string,
+        description: string,
+        inputSchema?: any
+    }[];
 }
 
 interface Message {
@@ -363,13 +367,7 @@ export default function EditAgentPage() {
                                                             <div className="flex-1 h-[1px] bg-white/5" />
                                                         </div>
                                                         {server.tools.map((t, tid) => (
-                                                            <div key={tid} className="flex items-center justify-between p-2 rounded-lg hover:bg-white/5 transition-colors border border-transparent hover:border-white/5 group/tool">
-                                                                <div className="flex items-center gap-2">
-                                                                    <div className="w-1.5 h-1.5 rounded-full bg-orange-500/30 group-hover/tool:bg-orange-500 transition-colors" />
-                                                                    <span className="text-[11px] font-bold text-neutral-300">{t.name}</span>
-                                                                </div>
-                                                                <button className="text-[10px] px-2 py-0.5 rounded-full bg-white/5 text-neutral-600 opacity-0 group-hover/tool:opacity-100 transition-opacity">Details</button>
-                                                            </div>
+                                                            <ToolItem key={tid} tool={t} />
                                                         ))}
                                                     </div>
                                                 </div>
@@ -638,6 +636,54 @@ export default function EditAgentPage() {
                     background: rgba(255, 255, 255, 0.08);
                 }
             `}</style>
+        </div>
+    );
+}
+
+function ToolItem({ tool }: { tool: any }) {
+    const [isExpanded, setIsExpanded] = useState(false);
+
+    return (
+        <div className="space-y-2">
+            <div
+                className={`flex items-center justify-between p-2.5 rounded-xl bg-white/[0.02] border transition-all group/tool cursor-pointer ${isExpanded ? 'border-orange-500/30 bg-orange-500/[0.02]' : 'border-white/5 hover:bg-white/5'}`}
+                onClick={() => setIsExpanded(!isExpanded)}
+            >
+                <div className="flex items-center gap-3">
+                    <div className={`w-2 h-2 rounded-full transition-colors shadow-[0_0_8px_rgba(249,115,22,0.4)] ${isExpanded ? 'bg-orange-500' : 'bg-orange-500/20 group-hover/tool:bg-orange-500'}`} />
+                    <div>
+                        <span className="text-[11px] font-bold text-neutral-200 block">{tool.name}</span>
+                        <span className="text-[9px] text-neutral-500 line-clamp-1">{tool.description}</span>
+                    </div>
+                </div>
+                <button
+                    className={`text-[9px] px-2 py-1 rounded-lg font-bold border transition-all ${isExpanded ? 'bg-orange-500 text-black border-orange-500' : 'bg-white/5 text-neutral-500 border-white/10 hover:border-white/20'}`}
+                >
+                    {isExpanded ? 'Hide' : 'Schema'}
+                </button>
+            </div>
+
+            <AnimatePresence>
+                {isExpanded && tool.inputSchema && (
+                    <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        transition={{ duration: 0.3, ease: 'circOut' }}
+                        className="overflow-hidden"
+                    >
+                        <div className="p-4 bg-black/40 border border-white/5 rounded-2xl ml-4 space-y-3">
+                            <div className="flex items-center justify-between">
+                                <span className="text-[9px] font-black uppercase text-neutral-600 tracking-widest">Input Parameters</span>
+                                <div className="h-[1px] flex-1 bg-white/5 mx-3" />
+                            </div>
+                            <pre className="text-[10px] font-mono text-orange-400 overflow-x-auto custom-scrollbar p-1">
+                                {JSON.stringify(tool.inputSchema, null, 2)}
+                            </pre>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }

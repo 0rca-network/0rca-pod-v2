@@ -12,8 +12,11 @@ import {
     Shield,
     Zap,
     Check,
-    Info
+    Info,
+    Loader2,
+    AlertCircle
 } from 'lucide-react';
+import { fetchMcpTools } from '@/lib/mcp-actions';
 
 interface AddMCPModalProps {
     isOpen: boolean;
@@ -26,6 +29,8 @@ export const AddMCPModal: React.FC<AddMCPModalProps> = ({ isOpen, onClose, onAdd
     const [type, setType] = useState<'SSE' | 'Streamable'>('Streamable');
     const [authMethod, setAuthMethod] = useState<'None' | 'API Key' | 'OAuth2'>('API Key');
     const [isAuthDropdownOpen, setIsAuthDropdownOpen] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     // API Key specific state
     const [keyName, setKeyName] = useState('');
@@ -35,22 +40,51 @@ export const AddMCPModal: React.FC<AddMCPModalProps> = ({ isOpen, onClose, onAdd
 
     if (!isOpen) return null;
 
-    const handleAdd = () => {
-        onAdd({
-            url,
-            type,
-            authMethod,
-            keyName,
-            location,
-            keyValue,
-            isShareable,
-            name: url.split('/').pop() || 'New MCP Server',
-            tools: [
-                { name: 'get_weather', description: 'Returns current weather for a location' },
-                { name: 'send_email', description: 'Sends an email via SMTP' }
-            ]
-        });
-        onClose();
+    const handleAdd = async () => {
+        if (!url) {
+            setError('Please enter an MCP Server URL');
+            return;
+        }
+
+        setIsLoading(true);
+        setError(null);
+
+        try {
+            const transportType = type === 'SSE' ? 'sse' : 'http';
+
+            // Construct headers if API key is used
+            const headers: Record<string, string> = {};
+            if (authMethod === 'API Key' && keyName && keyValue) {
+                if (location === 'Header') {
+                    headers[keyName] = keyValue;
+                }
+                // Note: Query and Cookie would typically be handled differently in a real fetch,
+                // but for @ai-sdk/mcp transport headers, we pass them as headers object.
+            }
+
+            const result = await fetchMcpTools(url, transportType as any, headers);
+
+            if (result.success) {
+                onAdd({
+                    url,
+                    type,
+                    authMethod,
+                    keyName,
+                    location,
+                    keyValue,
+                    isShareable,
+                    name: url.split('/').pop()?.split('?')[0] || 'New MCP Server',
+                    tools: result.tools
+                });
+                onClose();
+            } else {
+                setError(result.error || 'Failed to connect to MCP server');
+            }
+        } catch (err: any) {
+            setError(err.message || 'An unexpected error occurred');
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (
@@ -99,6 +133,16 @@ export const AddMCPModal: React.FC<AddMCPModalProps> = ({ isOpen, onClose, onAdd
                                     className="w-full bg-black/40 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:border-orange-500/30 transition-all placeholder:text-neutral-700"
                                 />
                             </div>
+                            {error && (
+                                <motion.div
+                                    initial={{ opacity: 0, y: -10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    className="flex items-center gap-2 px-4 py-2 bg-red-500/10 border border-red-500/20 rounded-xl text-[11px] text-red-400 font-medium"
+                                >
+                                    <AlertCircle size={14} />
+                                    {error}
+                                </motion.div>
+                            )}
                         </div>
 
                         {/* Type Radio */}
@@ -238,10 +282,20 @@ export const AddMCPModal: React.FC<AddMCPModalProps> = ({ isOpen, onClose, onAdd
                         </button>
                         <button
                             onClick={handleAdd}
-                            className="px-8 py-2.5 bg-orange-500 text-black rounded-xl text-xs font-black uppercase tracking-wider hover:brightness-110 active:scale-95 transition-all shadow-lg shadow-orange-500/20 flex items-center gap-2"
+                            disabled={isLoading}
+                            className={`px-8 py-2.5 bg-orange-500 text-black rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-lg shadow-orange-500/20 flex items-center gap-2 ${isLoading ? 'opacity-70 cursor-not-allowed' : 'hover:brightness-110 active:scale-95'}`}
                         >
-                            <Plus size={16} />
-                            Add Server
+                            {isLoading ? (
+                                <>
+                                    <Loader2 size={16} className="animate-spin" />
+                                    Connecting...
+                                </>
+                            ) : (
+                                <>
+                                    <Plus size={16} />
+                                    Add Server
+                                </>
+                            )}
                         </button>
                     </footer>
                 </motion.div>

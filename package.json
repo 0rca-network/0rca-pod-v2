@@ -11,6 +11,8 @@
     "test:watch": "jest --watch"
   },
   "dependencies": {
+    "@ai-sdk/mcp": "^1.0.5",
+    "@modelcontextprotocol/sdk": "^1.25.2",
     "@privy-io/react-auth": "^3.10.0",
     "@solana-program/system": "^0.10.0",
     "@supabase/supabase-js": "^2.76.1",
