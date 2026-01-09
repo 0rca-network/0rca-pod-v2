@@ -2,7 +2,7 @@
 
 import { createClient } from '@supabase/supabase-js';
 import Link from 'next/link';
-import { ArrowLeft, ExternalLink, Github, Zap, ShieldCheck, Globe, Clock, RefreshCw } from 'lucide-react';
+import { ArrowLeft, ExternalLink, Github, Zap, ShieldCheck, Globe, Clock, RefreshCw, Settings } from 'lucide-react';
 import { AgentThumbnail } from '@/components/AgentThumbnail';
 import { AgentDetailSkeleton } from '@/components/LoadingSkeleton';
 import { useState, useEffect } from 'react';
@@ -34,19 +34,32 @@ export default function AgentDetailsPage({ params }: AgentDetailsPageProps) {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [executing, setExecuting] = useState(false);
+    const [resolvedParams, setResolvedParams] = useState<{ id: string } | null>(null);
 
     useEffect(() => {
-        fetchAgent();
-    }, [params.id]);
+        const resolveParams = async () => {
+            const resolved = await params;
+            setResolvedParams(resolved);
+        };
+        resolveParams();
+    }, [params]);
+
+    useEffect(() => {
+        if (resolvedParams?.id) {
+            fetchAgent();
+        }
+    }, [resolvedParams?.id]);
 
     const fetchAgent = async () => {
+        if (!resolvedParams?.id) return;
+        
         try {
             setLoading(true);
             setError(null);
             const { data, error: fetchError } = await supabase
                 .from('agents')
                 .select('*')
-                .eq('id', params.id)
+                .eq('id', resolvedParams.id)
                 .single();
 
             if (fetchError) throw fetchError;
@@ -255,18 +268,28 @@ export default function AgentDetailsPage({ params }: AgentDetailsPageProps) {
                                         </>
                                     )}
                                 </button>
-                                {agent.repo_url && (
-                                    <a
-                                        href={agent.repo_url}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="px-8 lg:px-12 py-4 lg:py-6 bg-transparent border-2 border-white/10 text-white rounded-full font-black text-sm uppercase tracking-widest hover:bg-white/5 hover:border-white transition-all flex items-center justify-center gap-2 lg:gap-3 focus:outline-none focus:ring-2 focus:ring-white/50"
-                                        aria-label="View source code on GitHub"
+                                <div className="flex gap-3">
+                                    <Link
+                                        href={`/edit/${agent.id}`}
+                                        className="px-6 lg:px-8 py-4 lg:py-6 bg-transparent border-2 border-mint-glow/20 text-mint-glow rounded-full font-black text-sm uppercase tracking-widest hover:bg-mint-glow/5 hover:border-mint-glow transition-all flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-mint-glow/50"
+                                        aria-label="Edit agent"
                                     >
-                                        <Github size={16} className="lg:w-5 lg:h-5" />
-                                        SOURCE
-                                    </a>
-                                )}
+                                        <Settings size={16} className="lg:w-5 lg:h-5" />
+                                        EDIT
+                                    </Link>
+                                    {agent.repo_url && (
+                                        <a
+                                            href={agent.repo_url}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="px-6 lg:px-8 py-4 lg:py-6 bg-transparent border-2 border-white/10 text-white rounded-full font-black text-sm uppercase tracking-widest hover:bg-white/5 hover:border-white transition-all flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-white/50"
+                                            aria-label="View source code on GitHub"
+                                        >
+                                            <Github size={16} className="lg:w-5 lg:h-5" />
+                                            SOURCE
+                                        </a>
+                                    )}
+                                </div>
                             </div>
 
                             <div className="flex flex-wrap items-center gap-6 lg:gap-10 text-neutral-600">
