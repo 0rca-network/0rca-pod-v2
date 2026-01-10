@@ -10,6 +10,7 @@ const outfit = Outfit({ subsets: ['latin'], variable: '--font-outfit' });
 
 import { Header } from '@/components/Header';
 import { Providers } from '@/components/Providers';
+import { SupabaseWeb3Auth } from '@/components/SupabaseWeb3Auth';
 
 export default function RootLayout({
   children,
@@ -28,9 +29,11 @@ export default function RootLayout({
       <body className="bg-black text-white min-h-screen selection:bg-mint-glow selection:text-black antialiased overflow-x-hidden">
         <Providers>
           {!isEditPage && <Header />}
-          <div className={clsx("flex flex-col", isEditPage ? "h-screen" : "min-h-screen")}>
-            {children}
-          </div>
+          <SupabaseWeb3Auth>
+            <div className={clsx("flex flex-col", isEditPage ? "h-screen" : "min-h-screen")}>
+              {children}
+            </div>
+          </SupabaseWeb3Auth>
         </Providers>
       </body>
     </html>

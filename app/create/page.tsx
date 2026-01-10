@@ -154,8 +154,10 @@ export default function CreateAgentPage() {
     };
 
     const handleFinalize = async () => {
-        if (!githubUser?.id) {
-            toast.error("Please login with GitHub first to initialize your agent.");
+        const { data: { session } } = await supabase.auth.getSession();
+
+        if (!session?.user) {
+            toast.error("Please authenticate (GitHub or Wallet) to initialize your agent.");
             return;
         }
 
@@ -182,7 +184,7 @@ export default function CreateAgentPage() {
             const { data: agent, error } = await supabase
                 .from('agents')
                 .insert({
-                    user_id: githubUser.id,
+                    user_id: session.user.id,
                     name: formData.name,
                     description: formData.description,
                     subdomain: subdomain,

@@ -89,6 +89,12 @@ ALTER TABLE agents ENABLE ROW LEVEL SECURITY;
 ALTER TABLE deployments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE agent_usage_logs ENABLE ROW LEVEL SECURITY;
 
+-- Helper function to get the current user's wallet address from Supabase JWT
+CREATE OR REPLACE FUNCTION get_my_wallet()
+RETURNS TEXT AS $$
+  SELECT (auth.jwt() -> 'user_metadata' ->> 'wallet_address')::TEXT;
+$$ LANGUAGE sql STABLE;
+
 -- Agents: Users can only see and modify their own agents
 CREATE POLICY "Users can view own agents" ON agents
   FOR SELECT USING (auth.uid() = user_id);
