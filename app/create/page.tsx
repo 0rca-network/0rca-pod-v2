@@ -14,9 +14,19 @@ import {
     Wallet,
     Cpu,
     Zap,
-    Info
+    Info,
+    Search
 } from 'lucide-react';
 import { usePrivy } from '@privy-io/react-auth';
+import { supabase } from '@/lib/supabase';
+
+interface Repository {
+    id: number;
+    name: string;
+    description: string;
+    owner: { login: string };
+    html_url: string;
+}
 
 const agentOptions = [
     {
@@ -67,12 +77,67 @@ export default function CreateAgentPage() {
     const [formData, setFormData] = useState({
         name: '',
         description: '',
-        icon: 'zap'
+        icon: 'zap',
+        repoUrl: ''
     });
+
+    const [githubUser, setGithubUser] = useState<any>(null);
+    const [repos, setRepos] = useState<Repository[]>([]);
+    const [loadingRepos, setLoadingRepos] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
 
     useEffect(() => {
         setMounted(true);
+        const savedOption = localStorage.getItem('create_agent_selected_option');
+        if (savedOption) {
+            setSelectedOption(savedOption);
+            localStorage.removeItem('create_agent_selected_option');
+        }
+        checkSession();
     }, []);
+
+    const checkSession = async () => {
+        const { data: { session } } = await supabase.auth.getSession();
+        setGithubUser(session?.user ?? null);
+        if (session?.provider_token) {
+            fetchRepos(session.provider_token);
+        }
+    };
+
+    const fetchRepos = async (token: string) => {
+        setLoadingRepos(true);
+        try {
+            const res = await fetch('https://api.github.com/user/repos?per_page=100&sort=updated', {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            const data = await res.json();
+            if (Array.isArray(data)) {
+                setRepos(data);
+            }
+        } catch (error) {
+            console.error('Error fetching repos:', error);
+        }
+        setLoadingRepos(false);
+    };
+
+    const filteredRepos = repos.filter(repo =>
+        repo.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (repo.description && repo.description.toLowerCase().includes(searchQuery.toLowerCase()))
+    );
+
+    const signInWithGitHub = async () => {
+        if (selectedOption) {
+            localStorage.setItem('create_agent_selected_option', selectedOption);
+        }
+        const { error } = await supabase.auth.signInWithOAuth({
+            provider: 'github',
+            options: {
+                scopes: 'repo read:user',
+                redirectTo: `${window.location.origin}/auth/callback?next=/create`
+            }
+        });
+        if (error) console.error('Error:', error);
+    };
 
     const handleNextStep = () => {
         if (!selectedOption) return;
@@ -80,10 +145,15 @@ export default function CreateAgentPage() {
             window.location.href = 'https://flow.0rca.network';
             return;
         }
+        if (selectedOption === 'github' && !githubUser) {
+            signInWithGitHub();
+            return;
+        }
         setStep(2);
     };
 
     const handleFinalize = async () => {
+        console.log('Finalizing agent with data:', formData);
         const tempId = Math.random().toString(36).substring(7);
         router.push(`/edit/agent/${tempId}`);
     };
@@ -273,6 +343,59 @@ export default function CreateAgentPage() {
                                     ))}
                                 </div>
                             </div>
+
+                            {/* GitHub Repo Selection (Conditional) */}
+                            {selectedOption === 'github' && (
+                                <div className="space-y-6">
+                                    <label className="text-[10px] font-black uppercase tracking-[0.4em] text-neutral-600 ml-6">Select Repository</label>
+                                    <div className="relative mb-6">
+                                        <div className="absolute left-6 top-1/2 -translate-y-1/2 text-neutral-700 group-focus-within:text-mint-glow transition-colors">
+                                            <Search size={18} />
+                                        </div>
+                                        <input
+                                            type="text"
+                                            value={searchQuery}
+                                            onChange={(e) => setSearchQuery(e.target.value)}
+                                            placeholder="Search repositories..."
+                                            className="w-full bg-[#0a0a0a] border border-white/10 rounded-2xl py-4 pl-14 pr-6 text-sm font-medium placeholder:text-neutral-700 focus:outline-none focus:border-mint-glow/50 transition-all"
+                                        />
+                                    </div>
+                                    <div className="bg-[#0a0a0a] border border-white/10 rounded-[2.5rem] p-4 max-h-[400px] overflow-y-auto custom-scrollbar">
+                                        {loadingRepos ? (
+                                            <div className="flex items-center justify-center py-10">
+                                                <div className="w-8 h-8 border-2 border-mint-glow/20 border-t-mint-glow rounded-full animate-spin" />
+                                            </div>
+                                        ) : filteredRepos.length > 0 ? (
+                                            <div className="grid grid-cols-1 gap-2">
+                                                {filteredRepos.map((repo) => (
+                                                    <button
+                                                        key={repo.id}
+                                                        onClick={() => setFormData({
+                                                            ...formData,
+                                                            name: repo.name,
+                                                            description: repo.description || '',
+                                                            repoUrl: repo.html_url
+                                                        })}
+                                                        className={`flex flex-col items-start p-4 rounded-2xl transition-all ${formData.repoUrl === repo.html_url
+                                                            ? 'bg-mint-glow text-black'
+                                                            : 'hover:bg-white/5 text-neutral-400 hover:text-white'
+                                                            }`}
+                                                    >
+                                                        <span className="font-bold uppercase tracking-tight">{repo.name}</span>
+                                                        <span className={`text-[10px] ${formData.repoUrl === repo.html_url ? 'text-black/60' : 'text-neutral-500'}`}>
+                                                            {repo.owner.login} • {repo.description || 'No description'}
+                                                        </span>
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div className="text-center py-10 text-neutral-500">
+                                                No repositories found.
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
 
                             {/* Inputs */}
                             <div className="space-y-10">

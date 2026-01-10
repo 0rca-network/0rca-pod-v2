@@ -8,7 +8,7 @@ export default function AuthCallback() {
   useEffect(() => {
     const handleAuthCallback = async () => {
       const { data, error } = await supabase.auth.getSession()
-      
+
       if (error) {
         console.error('Auth error:', error)
         router.push('/')
@@ -16,14 +16,17 @@ export default function AuthCallback() {
       }
 
       if (data.session) {
-        router.push('/pod')
+        const next = router.query.next as string || '/pod'
+        router.push(next)
       } else {
         router.push('/')
       }
     }
 
-    handleAuthCallback()
-  }, [router])
+    if (router.isReady) {
+      handleAuthCallback()
+    }
+  }, [router, router.isReady])
 
   return (
     <div className="min-h-screen bg-black flex items-center justify-center">
