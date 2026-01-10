@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { usePrivy } from '@privy-io/react-auth';
 import { supabase } from '@/lib/supabase';
+import { toast } from 'react-toastify';
 
 interface Repository {
     id: number;
@@ -153,9 +154,67 @@ export default function CreateAgentPage() {
     };
 
     const handleFinalize = async () => {
-        console.log('Finalizing agent with data:', formData);
-        const tempId = Math.random().toString(36).substring(7);
-        router.push(`/edit/agent/${tempId}`);
+        if (!githubUser?.id) {
+            toast.error("Please login with GitHub first to initialize your agent.");
+            return;
+        }
+
+        if (!isConnected) {
+            toast.error("Please connect your wallet to proceed.");
+            return;
+        }
+
+        const idToast = toast.loading("Initializing agent architecture...");
+
+        try {
+            // Generate a subdomain (slugified name)
+            const subdomain = formData.name.toLowerCase().replace(/[^a-z0-9]/g, '-') + '-' + Math.random().toString(36).substring(7);
+
+            // Extract owner and repo from URL
+            let repoOwner = 'unknown';
+            let repoName = 'unknown';
+            if (formData.repoUrl) {
+                const parts = formData.repoUrl.replace('https://github.com/', '').split('/');
+                repoOwner = parts[0];
+                repoName = parts[1];
+            }
+
+            const { data: agent, error } = await supabase
+                .from('agents')
+                .insert({
+                    user_id: githubUser.id,
+                    name: formData.name,
+                    description: formData.description,
+                    subdomain: subdomain,
+                    repo_owner: repoOwner,
+                    repo_name: repoName,
+                    github_url: formData.repoUrl,
+                    status: 'pending',
+                    port: 8000,
+                    k8s_namespace: 'agents'
+                })
+                .select()
+                .single();
+
+            if (error) throw error;
+
+            toast.update(idToast, {
+                render: "Agent core initialized!",
+                type: "success",
+                isLoading: false,
+                autoClose: 3000
+            });
+
+            router.push(`/edit/agent/${agent.id}`);
+        } catch (error: any) {
+            console.error('Finalization error:', error);
+            toast.update(idToast, {
+                render: `Initialization failed: ${error.message}`,
+                type: "error",
+                isLoading: false,
+                autoClose: 5000
+            });
+        }
     };
 
     if (!mounted || !ready) {

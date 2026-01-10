@@ -40,6 +40,7 @@ import { usePrivy, useWallets } from '@privy-io/react-auth';
 import { ethers } from 'ethers';
 import CONTRACTS from '@/lib/contracts.json';
 import { toast } from 'react-toastify';
+import { supabase } from '@/lib/supabase';
 
 interface MCPServer {
     id: string;
@@ -97,11 +98,33 @@ export default function EditAgentPage() {
     const [chatInput, setChatInput] = useState('');
     const [isPublishing, setIsPublishing] = useState(false);
     const [balance, setBalance] = useState<string>('0.00');
+    const [agentData, setAgentData] = useState<any>(null);
+    const [isLoadingAgent, setIsLoadingAgent] = useState(id !== 'new');
 
     // Privy & Wallet
     const { user, authenticated } = usePrivy();
     const { wallets } = useWallets();
     const wallet = wallets[0];
+
+    useEffect(() => {
+        const fetchAgentData = async () => {
+            if (id === 'new') return;
+            setIsLoadingAgent(true);
+            const { data, error } = await supabase
+                .from('agents')
+                .select('*')
+                .eq('id', id)
+                .single();
+
+            if (data) {
+                setAgentData(data);
+                setAgentName(data.name);
+                if (data.description) setBackgroundSetting(data.description);
+            }
+            setIsLoadingAgent(false);
+        };
+        fetchAgentData();
+    }, [id]);
 
     useEffect(() => {
         const fetchBalance = async () => {
@@ -169,17 +192,108 @@ export default function EditAgentPage() {
 
             const contract = new ethers.Contract(registryAddress, abi, signer);
 
-            // Using agent name and mock URI for now as requested for production logic
-            const tx = await contract.register(JSON.stringify({
+            // 1. Prepare Metadata for Pinata
+            toast.update(idToast, { render: "Uploading metadata to IPFS via Pinata...", type: "info", isLoading: true });
+
+            const metadata = {
                 name: agentName,
-                description: backgroundSetting.slice(0, 100),
-                version: "1.0.0"
-            }));
+                type: "https://eips.ethereum.org/EIPS/eip-8004#registration-v1",
+                image: "https://raw.githubusercontent.com/0rca-network/assets/main/orca-pod-logo.png",
+                links: {
+                    sourceCode: agentData?.github_url || "",
+                    documentation: agentData?.github_url || "",
+                    identityRegistry: registryAddress,
+                    portfolioVerifier: "0x5A86a43E9E08C450a7909e845Ea5E4d16A3C23F2", // Preset example
+                },
+                pricing: {
+                    model: "pay-per-validation",
+                    proofGeneration: "Free (off-chain computation)",
+                    onChainValidation: "Gas costs only"
+                },
+                endpoints: [
+                    {
+                        name: "agentWallet",
+                        version: "v1",
+                        endpoint: `eip155:338:${wallet.address}`
+                    }
+                ],
+                technology: {
+                    blockchain: "Cronos Testnet",
+                    smartContracts: "Solidity 0.8.20"
+                },
+                description: backgroundSetting,
+                capabilities: {
+                    reputation: {
+                        acceptsFeedback: true,
+                        feedbackEnabled: true,
+                        reputationRegistry: `eip155:338:${CONTRACTS.cronosTestnet.reputationRegistry}`
+                    }
+                },
+                registrations: [
+                    {
+                        agentId: id,
+                        agentRegistry: `eip155:338:${registryAddress}`
+                    }
+                ]
+            };
+
+            // Add Inference Endpoint if available
+            if (agentData?.inference_url) {
+                metadata.endpoints.push({
+                    name: "inferenceApi",
+                    version: "v1",
+                    endpoint: agentData.inference_url
+                });
+            }
+
+            // 2. Upload to Pinata
+            const pinataRes = await fetch('/api/pinata', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(metadata)
+            });
+
+            if (!pinataRes.ok) {
+                const error = await pinataRes.json();
+                throw new Error(error.error || "Failed to upload to IPFS");
+            }
+
+            const pinataResult = await pinataRes.json();
+            const ipfsUri = `ipfs://${pinataResult.IpfsHash}`;
+
+            // 3. Register on-chain
+            toast.update(idToast, { render: "Signing transaction on Cronos Testnet...", type: "info", isLoading: true });
+            const tx = await contract.register(ipfsUri);
 
             toast.update(idToast, { render: "Waiting for transaction confirmation...", type: "info", isLoading: true });
 
             const receipt = await tx.wait();
             console.log("Transaction receipt:", receipt);
+
+            // Extract AgentID from events if possible (EIP-8004 Registered event)
+            let contractAgentId = "";
+            try {
+                const log = receipt.logs.find((l: any) => l.address.toLowerCase() === registryAddress.toLowerCase());
+                if (log) {
+                    const parsed = contract.interface.parseLog(log);
+                    if (parsed?.name === 'Registered') {
+                        contractAgentId = parsed.args.agentId.toString();
+                    }
+                }
+            } catch (e) {
+                console.warn("Could not parse agentId from logs:", e);
+            }
+
+            // 4. Update Database
+            await supabase
+                .from('agents')
+                .update({
+                    ipfs_cid: pinataResult.IpfsHash,
+                    chain_agent_id: contractAgentId || undefined,
+                    contract_address: registryAddress,
+                    status: 'active'
+                })
+                .eq('id', id);
 
             toast.update(idToast, {
                 render: `Successfully registered agent on-chain!`,
