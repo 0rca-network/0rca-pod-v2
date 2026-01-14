@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { createClient } from '@supabase/supabase-js';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  ArrowLeft, 
-  Save, 
-  Eye, 
+import {
+  ArrowLeft,
+  Save,
+  Eye,
   Plus,
   Brain,
   Settings as SettingsIcon,
@@ -70,15 +70,9 @@ export default function EditAgentPage({ params }: EditAgentPageProps) {
     resolveParams();
   }, [params]);
 
-  useEffect(() => {
-    if (resolvedParams?.id) {
-      fetchAgent();
-    }
-  }, [resolvedParams?.id]);
-
-  const fetchAgent = async () => {
+  const fetchAgent = useCallback(async () => {
     if (!resolvedParams?.id) return;
-    
+
     try {
       setLoading(true);
       const { data, error } = await supabase
@@ -94,11 +88,17 @@ export default function EditAgentPage({ params }: EditAgentPageProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [resolvedParams?.id]);
+
+  useEffect(() => {
+    if (resolvedParams?.id) {
+      fetchAgent();
+    }
+  }, [resolvedParams?.id, fetchAgent]);
 
   const handleSave = async () => {
     if (!agent || !resolvedParams?.id) return;
-    
+
     setSaving(true);
     try {
       const { error } = await supabase
@@ -149,13 +149,13 @@ export default function EditAgentPage({ params }: EditAgentPageProps) {
         {/* Header with back button and agent info */}
         <div className="p-4 border-b border-neutral-800">
           <div className="flex items-center justify-between mb-4">
-            <Link 
+            <Link
               href={`/agents/${agent.id}`}
               className="flex items-center gap-2 text-neutral-400 hover:text-white transition-colors"
             >
               <ArrowLeft size={20} />
             </Link>
-            
+
             <div className="flex items-center gap-2">
               <button className="p-2 text-neutral-400 hover:text-white transition-colors">
                 <Copy size={16} />
@@ -172,7 +172,7 @@ export default function EditAgentPage({ params }: EditAgentPageProps) {
               </button>
             </div>
           </div>
-          
+
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-neutral-700 rounded-lg flex items-center justify-center">
               <Sparkles size={14} className="text-neutral-400" />
@@ -197,24 +197,24 @@ export default function EditAgentPage({ params }: EditAgentPageProps) {
             <h2 className="text-lg font-semibold mb-2">Fine Tuning</h2>
             <div className="text-sm text-neutral-400 mb-4">Background Setting</div>
           </div>
-          
+
           <div className="space-y-4">
             <div className="text-sm text-neutral-300 leading-relaxed">
-              Edit the Agent's personality and response logic, including role, goals, skills, and constraints.
+              Edit the Agent&apos;s personality and response logic, including role, goals, skills, and constraints.
             </div>
             <div className="text-sm text-neutral-500">Sample:------------------------</div>
-            
+
             <div className="space-y-3">
               <div>
                 <div className="text-mint-glow font-semibold mb-1 text-sm">Role:</div>
                 <div className="text-sm text-neutral-400">sample role</div>
               </div>
-              
+
               <div>
                 <div className="text-mint-glow font-semibold mb-1 text-sm">Goal:</div>
                 <div className="text-sm text-neutral-400">sample goal</div>
               </div>
-              
+
               <div>
                 <div className="text-mint-glow font-semibold mb-1 text-sm">Skills:</div>
                 <div className="text-sm text-neutral-400 space-y-1">
@@ -223,7 +223,7 @@ export default function EditAgentPage({ params }: EditAgentPageProps) {
                   <div>3. Skill 3</div>
                 </div>
               </div>
-              
+
               <div>
                 <div className="text-mint-glow font-semibold mb-1 text-sm">Constraints:</div>
                 <div className="text-sm text-neutral-400 space-y-1">
@@ -253,15 +253,15 @@ export default function EditAgentPage({ params }: EditAgentPageProps) {
               className="flex items-center justify-between w-full mb-4 group"
             >
               <div className="flex items-center gap-2">
-                <ChevronDown 
-                  size={16} 
-                  className={`text-neutral-400 transition-transform ${expandedSections.tool ? 'rotate-0' : '-rotate-90'}`} 
+                <ChevronDown
+                  size={16}
+                  className={`text-neutral-400 transition-transform ${expandedSections.tool ? 'rotate-0' : '-rotate-90'}`}
                 />
                 <span className="text-lg font-medium">Tool</span>
               </div>
               <Plus size={16} className="text-neutral-400 group-hover:text-white transition-colors" />
             </button>
-            
+
             {expandedSections.tool && (
               <div className="ml-6 mb-6">
                 <div className="bg-neutral-900/30 rounded-lg p-4 border border-neutral-800">
@@ -283,14 +283,14 @@ export default function EditAgentPage({ params }: EditAgentPageProps) {
               className="flex items-center justify-between w-full mb-4"
             >
               <div className="flex items-center gap-2">
-                <ChevronDown 
-                  size={16} 
-                  className={`text-neutral-400 transition-transform ${expandedSections.greeting ? 'rotate-0' : '-rotate-90'}`} 
+                <ChevronDown
+                  size={16}
+                  className={`text-neutral-400 transition-transform ${expandedSections.greeting ? 'rotate-0' : '-rotate-90'}`}
                 />
                 <span className="text-lg font-medium">Greeting</span>
               </div>
             </button>
-            
+
             {expandedSections.greeting && (
               <div className="ml-6 mb-6">
                 <input
@@ -315,15 +315,15 @@ export default function EditAgentPage({ params }: EditAgentPageProps) {
               className="flex items-center justify-between w-full mb-4 group"
             >
               <div className="flex items-center gap-2">
-                <ChevronDown 
-                  size={16} 
-                  className={`text-neutral-400 transition-transform ${expandedSections.shortcuts ? 'rotate-0' : '-rotate-90'}`} 
+                <ChevronDown
+                  size={16}
+                  className={`text-neutral-400 transition-transform ${expandedSections.shortcuts ? 'rotate-0' : '-rotate-90'}`}
                 />
                 <span className="text-lg font-medium">Shortcuts</span>
               </div>
               <Plus size={16} className="text-neutral-400 group-hover:text-white transition-colors" />
             </button>
-            
+
             {expandedSections.shortcuts && (
               <div className="ml-6 mb-6">
                 <div className="text-neutral-400 text-sm">No shortcuts added yet</div>
@@ -338,14 +338,14 @@ export default function EditAgentPage({ params }: EditAgentPageProps) {
               className="flex items-center justify-between w-full mb-4"
             >
               <div className="flex items-center gap-2">
-                <ChevronDown 
-                  size={16} 
-                  className={`text-neutral-400 transition-transform ${expandedSections.authentication ? 'rotate-0' : '-rotate-90'}`} 
+                <ChevronDown
+                  size={16}
+                  className={`text-neutral-400 transition-transform ${expandedSections.authentication ? 'rotate-0' : '-rotate-90'}`}
                 />
                 <span className="text-lg font-medium">Authentication</span>
               </div>
             </button>
-            
+
             {expandedSections.authentication && (
               <div className="ml-6 mb-6">
                 <div className="flex items-center justify-between">
@@ -374,7 +374,7 @@ export default function EditAgentPage({ params }: EditAgentPageProps) {
             <MoreHorizontal size={16} className="text-neutral-400" />
           </div>
         </div>
-        
+
         <div className="flex-1 p-4 overflow-y-auto">
           <div className="space-y-4">
             <div className="flex items-center gap-3">
@@ -387,7 +387,7 @@ export default function EditAgentPage({ params }: EditAgentPageProps) {
               </div>
               <Copy size={14} className="text-neutral-400" />
             </div>
-            
+
             <div className="text-sm text-neutral-400 leading-relaxed">
               {agent.description || 'Agent description will appear here...'}
             </div>

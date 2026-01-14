@@ -36,7 +36,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         const { data: { users }, error: listError } = await supabaseAdmin.auth.admin.listUsers();
         if (listError) throw listError;
 
-        let user = users.find(u => u.user_metadata?.wallet_address === walletAddress);
+        let user = users.find((u: any) => u.user_metadata?.wallet_address === walletAddress);
 
         if (!user) {
             const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({

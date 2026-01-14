@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -87,25 +87,7 @@ export default function CreateAgentPage() {
     const [loadingRepos, setLoadingRepos] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
 
-    useEffect(() => {
-        setMounted(true);
-        const savedOption = localStorage.getItem('create_agent_selected_option');
-        if (savedOption) {
-            setSelectedOption(savedOption);
-            localStorage.removeItem('create_agent_selected_option');
-        }
-        checkSession();
-    }, []);
-
-    const checkSession = async () => {
-        const { data: { session } } = await supabase.auth.getSession();
-        setGithubUser(session?.user ?? null);
-        if (session?.provider_token) {
-            fetchRepos(session.provider_token);
-        }
-    };
-
-    const fetchRepos = async (token: string) => {
+    const fetchRepos = useCallback(async (token: string) => {
         setLoadingRepos(true);
         try {
             const res = await fetch('https://api.github.com/user/repos?per_page=100&sort=updated', {
@@ -119,7 +101,25 @@ export default function CreateAgentPage() {
             console.error('Error fetching repos:', error);
         }
         setLoadingRepos(false);
-    };
+    }, []);
+
+    const checkSession = useCallback(async () => {
+        const { data: { session } } = await supabase.auth.getSession();
+        setGithubUser(session?.user ?? null);
+        if (session?.provider_token) {
+            fetchRepos(session.provider_token);
+        }
+    }, [fetchRepos]);
+
+    useEffect(() => {
+        setMounted(true);
+        const savedOption = localStorage.getItem('create_agent_selected_option');
+        if (savedOption) {
+            setSelectedOption(savedOption);
+            localStorage.removeItem('create_agent_selected_option');
+        }
+        checkSession();
+    }, [checkSession]);
 
     const filteredRepos = repos.filter(repo =>
         repo.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
