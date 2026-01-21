@@ -15,11 +15,15 @@ import {
     Cpu,
     Zap,
     Info,
-    Search
+    Search,
+    Plus,
+    X,
+    RefreshCw
 } from 'lucide-react';
 import { usePrivy } from '@privy-io/react-auth';
 import { supabase } from '@/lib/supabase';
 import { toast } from 'react-toastify';
+import { listAvailableRepos } from '@/lib/github-actions';
 
 interface Repository {
     id: number;
@@ -27,16 +31,11 @@ interface Repository {
     description: string;
     owner: { login: string };
     html_url: string;
+    updated_at: string;
+    pushed_at: string;
 }
 
 const agentOptions = [
-    {
-        id: 'mcp',
-        title: 'Import from MCP',
-        description: 'Instantly connect to existing Model Context Protocol servers.',
-        icon: Server,
-        gradient: 'from-[#818cf8] to-[#c084fc]',
-    },
     {
         id: 'flow',
         title: 'Visual Flow Builder',
@@ -46,8 +45,8 @@ const agentOptions = [
     },
     {
         id: 'custom',
-        title: 'Create Custom Agent',
-        description: 'Build your own specialized agent from the ground up.',
+        title: 'Create AI Agent',
+        description: 'Build your own specialized agent from scratch, integrate APIs, or connect to MCP servers.',
         icon: Sparkles,
         gradient: 'from-[#34d399] to-[#3b82f6]',
     },
@@ -93,16 +92,23 @@ export default function CreateAgentPage() {
     const [repos, setRepos] = useState<Repository[]>([]);
     const [loadingRepos, setLoadingRepos] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
+    const [isRepoModalOpen, setIsRepoModalOpen] = useState(false);
 
-    const fetchRepos = useCallback(async (token: string) => {
+    const fetchRepos = useCallback(async () => {
         setLoadingRepos(true);
         try {
-            const res = await fetch('https://api.github.com/user/repos?per_page=100&sort=updated', {
-                headers: { Authorization: `Bearer ${token}` }
-            });
-            const data = await res.json();
-            if (Array.isArray(data)) {
-                setRepos(data);
+            const result = await listAvailableRepos();
+            if (result.success && result.repos) {
+                const formattedRepos = result.repos.map((r: any) => ({
+                    id: r.id,
+                    name: r.name,
+                    description: r.description,
+                    owner: { login: r.owner },
+                    html_url: r.html_url,
+                    updated_at: r.updated_at,
+                    pushed_at: r.pushed_at
+                }));
+                setRepos(formattedRepos);
             }
         } catch (error) {
             console.error('Error fetching repos:', error);
@@ -111,11 +117,7 @@ export default function CreateAgentPage() {
     }, []);
 
     const checkSession = useCallback(async () => {
-        const { data: { session } } = await supabase.auth.getSession();
-        setGithubUser(session?.user ?? null);
-        if (session?.provider_token) {
-            fetchRepos(session.provider_token);
-        }
+        fetchRepos();
     }, [fetchRepos]);
 
     useEffect(() => {
@@ -128,10 +130,29 @@ export default function CreateAgentPage() {
         checkSession();
     }, [checkSession]);
 
-    const filteredRepos = repos.filter(repo =>
-        repo.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (repo.description && repo.description.toLowerCase().includes(searchQuery.toLowerCase()))
-    );
+    const filteredRepos = React.useMemo(() => {
+        const search = searchQuery.toLowerCase().trim();
+        if (!search) {
+            return [...repos].sort((a, b) => {
+                const timeA = new Date(a.pushed_at || a.updated_at).getTime();
+                const timeB = new Date(b.pushed_at || b.updated_at).getTime();
+                return timeB - timeA;
+            });
+        }
+
+        return repos
+            .filter(repo => {
+                const nameMatch = repo.name.toLowerCase().includes(search);
+                const ownerMatch = repo.owner.login.toLowerCase().includes(search);
+                const descMatch = repo.description?.toLowerCase().includes(search);
+                return nameMatch || ownerMatch || descMatch;
+            })
+            .sort((a, b) => {
+                const timeA = new Date(a.pushed_at || a.updated_at).getTime();
+                const timeB = new Date(b.pushed_at || b.updated_at).getTime();
+                return timeB - timeA;
+            });
+    }, [repos, searchQuery]);
 
     const signInWithGitHub = async () => {
         if (selectedOption) {
@@ -151,10 +172,6 @@ export default function CreateAgentPage() {
         if (!selectedOption) return;
         if (selectedOption === 'flow') {
             window.location.href = 'https://flow.0rca.network';
-            return;
-        }
-        if (selectedOption === 'github' && !githubUser) {
-            signInWithGitHub();
             return;
         }
         setStep(2);
@@ -216,6 +233,8 @@ export default function CreateAgentPage() {
 
             if (selectedOption === 'cdc-agent') {
                 router.push(`/edit/cdc-agent/${agent.id}`);
+            } else if (selectedOption === 'github') {
+                router.push(`/import/github/${agent.id}`);
             } else {
                 router.push(`/edit/agent/${agent.id}`);
             }
@@ -419,53 +438,170 @@ export default function CreateAgentPage() {
                             {/* GitHub Repo Selection (Conditional) */}
                             {selectedOption === 'github' && (
                                 <div className="space-y-6">
-                                    <label className="text-[10px] font-black uppercase tracking-[0.4em] text-neutral-600 ml-6">Select Repository</label>
-                                    <div className="relative mb-6">
-                                        <div className="absolute left-6 top-1/2 -translate-y-1/2 text-neutral-700 group-focus-within:text-mint-glow transition-colors">
-                                            <Search size={18} />
-                                        </div>
-                                        <input
-                                            type="text"
-                                            value={searchQuery}
-                                            onChange={(e) => setSearchQuery(e.target.value)}
-                                            placeholder="Search repositories..."
-                                            className="w-full bg-[#0a0a0a] border border-white/10 rounded-2xl py-4 pl-14 pr-6 text-sm font-medium placeholder:text-neutral-700 focus:outline-none focus:border-mint-glow/50 transition-all"
-                                        />
+                                    <div className="flex items-center justify-between mb-4 px-6">
+                                        <label className="text-[10px] font-black uppercase tracking-[0.4em] text-neutral-600">Source Repository</label>
+                                        <a
+                                            href="https://github.com/apps/0rca-network"
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-[10px] font-bold text-mint-glow hover:underline flex items-center gap-1"
+                                        >
+                                            <Github size={12} />
+                                            Configure App
+                                        </a>
                                     </div>
-                                    <div className="bg-[#0a0a0a] border border-white/10 rounded-[2.5rem] p-4 max-h-[400px] overflow-y-auto custom-scrollbar">
-                                        {loadingRepos ? (
-                                            <div className="flex items-center justify-center py-10">
-                                                <div className="w-8 h-8 border-2 border-mint-glow/20 border-t-mint-glow rounded-full animate-spin" />
+
+                                    {!formData.repoUrl ? (
+                                        <button
+                                            onClick={() => setIsRepoModalOpen(true)}
+                                            className="w-full bg-[#0a0a0a] border border-white/10 rounded-[2.5rem] py-10 flex flex-col items-center justify-center gap-4 hover:border-mint-glow/30 hover:bg-white/5 transition-all group"
+                                        >
+                                            <div className="w-14 h-14 rounded-full bg-white/5 flex items-center justify-center group-hover:scale-110 transition-all">
+                                                <Plus size={24} className="text-neutral-500 group-hover:text-mint-glow" />
                                             </div>
-                                        ) : filteredRepos.length > 0 ? (
-                                            <div className="grid grid-cols-1 gap-2">
-                                                {filteredRepos.map((repo) => (
-                                                    <button
-                                                        key={repo.id}
-                                                        onClick={() => setFormData({
-                                                            ...formData,
-                                                            name: repo.name,
-                                                            description: repo.description || '',
-                                                            repoUrl: repo.html_url
-                                                        })}
-                                                        className={`flex flex-col items-start p-4 rounded-2xl transition-all ${formData.repoUrl === repo.html_url
-                                                            ? 'bg-mint-glow text-black'
-                                                            : 'hover:bg-white/5 text-neutral-400 hover:text-white'
-                                                            }`}
-                                                    >
-                                                        <span className="font-bold uppercase tracking-tight">{repo.name}</span>
-                                                        <span className={`text-[10px] ${formData.repoUrl === repo.html_url ? 'text-black/60' : 'text-neutral-500'}`}>
-                                                            {repo.owner.login} • {repo.description || 'No description'}
-                                                        </span>
-                                                    </button>
-                                                ))}
+                                            <span className="text-sm font-bold uppercase tracking-widest text-neutral-500">Connect Repository</span>
+                                        </button>
+                                    ) : (
+                                        <div className="relative group">
+                                            <div className="w-full bg-[#0a0a0a] border border-mint-glow/30 rounded-[2.5rem] p-8 flex items-center justify-between group-hover:border-mint-glow/60 transition-all">
+                                                <div className="flex items-center gap-5">
+                                                    <div className="w-14 h-14 rounded-2xl bg-black border border-white/10 flex items-center justify-center">
+                                                        <Github size={24} className="text-white" />
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-xl font-bold font-outfit uppercase tracking-tight">{formData.name}</p>
+                                                        <p className="text-[10px] text-neutral-500 uppercase tracking-widest font-black">
+                                                            {formData.repoUrl.replace('https://github.com/', '')}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                                <button
+                                                    onClick={() => setIsRepoModalOpen(true)}
+                                                    className="px-6 py-2 rounded-full border border-white/10 hover:bg-white/5 text-[10px] font-black uppercase tracking-widest transition-all"
+                                                >
+                                                    Change
+                                                </button>
                                             </div>
-                                        ) : (
-                                            <div className="text-center py-10 text-neutral-500">
-                                                No repositories found.
+                                        </div>
+                                    )}
+
+                                    {/* Repository Selection Modal */}
+                                    <AnimatePresence>
+                                        {isRepoModalOpen && (
+                                            <div className="fixed inset-0 z-[100] flex items-center justify-center px-4 md:px-0">
+                                                <motion.div
+                                                    initial={{ opacity: 0 }}
+                                                    animate={{ opacity: 1 }}
+                                                    exit={{ opacity: 0 }}
+                                                    onClick={() => setIsRepoModalOpen(false)}
+                                                    className="absolute inset-0 bg-black/90 backdrop-blur-2xl"
+                                                />
+                                                <motion.div
+                                                    initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                                                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                                                    exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                                                    className="relative w-full max-w-2xl bg-[#0d0d0d] border border-white/10 rounded-[3rem] shadow-2xl flex flex-col max-h-[85vh] overflow-hidden"
+                                                >
+                                                    {/* Modal Header */}
+                                                    <div className="p-10 border-b border-white/5 space-y-8">
+                                                        <div className="flex items-center justify-between">
+                                                            <div className="space-y-1">
+                                                                <h2 className="text-3xl font-black font-outfit uppercase tracking-tighter">Select Repository</h2>
+                                                                <p className="text-xs text-neutral-500 font-medium">Browse app-authorized repositories sorted by recent activity.</p>
+                                                            </div>
+                                                            <button
+                                                                onClick={() => setIsRepoModalOpen(false)}
+                                                                className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center hover:bg-white/10 transition-colors"
+                                                            >
+                                                                <X size={18} />
+                                                            </button>
+                                                        </div>
+
+                                                        <div className="relative group">
+                                                            <div className="absolute left-6 top-1/2 -translate-y-1/2 text-neutral-700 group-focus-within:text-mint-glow transition-colors">
+                                                                <Search size={18} />
+                                                            </div>
+                                                            <input
+                                                                autoFocus
+                                                                type="text"
+                                                                value={searchQuery}
+                                                                onChange={(e) => setSearchQuery(e.target.value)}
+                                                                placeholder="Filter by name or description..."
+                                                                className="w-full bg-black border border-white/10 rounded-2xl py-5 pl-16 pr-8 text-sm font-medium placeholder:text-neutral-800 focus:outline-none focus:border-mint-glow/50 transition-all shadow-inner"
+                                                            />
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Repository List */}
+                                                    <div className="flex-1 overflow-y-auto custom-scrollbar p-6">
+                                                        {loadingRepos ? (
+                                                            <div className="flex flex-col items-center justify-center py-20 gap-4">
+                                                                <div className="w-12 h-12 border-2 border-mint-glow/20 border-t-mint-glow rounded-full animate-spin" />
+                                                                <p className="text-[10px] font-black uppercase tracking-widest text-neutral-600">Querying Installations...</p>
+                                                            </div>
+                                                        ) : filteredRepos.length > 0 ? (
+                                                            <div className="grid grid-cols-1 gap-3">
+                                                                {filteredRepos.map((repo) => (
+                                                                    <button
+                                                                        key={repo.id}
+                                                                        onClick={() => {
+                                                                            setFormData({
+                                                                                ...formData,
+                                                                                name: repo.name,
+                                                                                description: repo.description || '',
+                                                                                repoUrl: repo.html_url
+                                                                            });
+                                                                            setIsRepoModalOpen(false);
+                                                                        }}
+                                                                        className={`flex flex-col items-start p-6 rounded-3xl transition-all border ${formData.repoUrl === repo.html_url
+                                                                            ? 'bg-mint-glow border-mint-glow text-black shadow-xl shadow-mint-glow/10'
+                                                                            : 'bg-black/40 border-white/5 hover:border-white/10 text-neutral-400 hover:text-white hover:bg-white/5'
+                                                                            }`}
+                                                                    >
+                                                                        <div className="flex items-center gap-3 mb-2">
+                                                                            <Github size={14} className={formData.repoUrl === repo.html_url ? 'text-black' : 'text-neutral-500'} />
+                                                                            <span className="font-bold uppercase tracking-tight text-lg">{repo.name}</span>
+                                                                        </div>
+                                                                        <p className={`text-xs text-left line-clamp-2 ${formData.repoUrl === repo.html_url ? 'text-black/60 font-medium' : 'text-neutral-500 font-light'}`}>
+                                                                            {repo.description || 'No description provided.'}
+                                                                        </p>
+                                                                        <div className="flex items-center gap-4 mt-4">
+                                                                            <span className={`text-[9px] font-black uppercase tracking-widest ${formData.repoUrl === repo.html_url ? 'text-black/40' : 'text-neutral-600'}`}>
+                                                                                {repo.owner.login}
+                                                                            </span>
+                                                                            <span className={`text-[9px] font-mono ${formData.repoUrl === repo.html_url ? 'text-black/30' : 'text-neutral-700'}`}>
+                                                                                Pushed {new Date(repo.pushed_at || repo.updated_at).toLocaleDateString()}
+                                                                            </span>
+                                                                        </div>
+                                                                    </button>
+                                                                ))}
+                                                            </div>
+                                                        ) : (
+                                                            <div className="flex flex-col items-center justify-center py-20 text-center space-y-4">
+                                                                <div className="w-16 h-16 rounded-3xl bg-white/5 flex items-center justify-center">
+                                                                    <Search size={24} className="text-neutral-700" />
+                                                                </div>
+                                                                <div className="space-y-1">
+                                                                    <p className="text-sm font-bold text-neutral-400">No matches found</p>
+                                                                    <p className="text-xs text-neutral-600">Try adjusting your filter or <a href="https://github.com/apps/0rca-network" target="_blank" rel="noreferrer" className="text-mint-glow hover:underline">configure the app</a>.</p>
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </div>
+
+                                                    <div className="p-8 border-t border-white/5 flex justify-center">
+                                                        <button
+                                                            onClick={fetchRepos}
+                                                            className="flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.3em] text-neutral-600 hover:text-white transition-colors"
+                                                        >
+                                                            <RefreshCw size={12} className={loadingRepos ? 'animate-spin' : ''} />
+                                                            Synchronize Repositories
+                                                        </button>
+                                                    </div>
+                                                </motion.div>
                                             </div>
                                         )}
-                                    </div>
+                                    </AnimatePresence>
                                 </div>
                             )}
 
@@ -539,6 +675,6 @@ export default function CreateAgentPage() {
                     </button>
                 </div>
             </div>
-        </div>
+        </div >
     );
 }

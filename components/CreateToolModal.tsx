@@ -19,8 +19,13 @@ import {
   Lock,
   Zap,
   Check,
-  ChevronRight
+  ChevronRight,
+  Search,
+  Database,
+  Layout,
+  Cpu
 } from 'lucide-react';
+import { CREWAI_TOOLS } from '@/lib/crewai-tools';
 
 interface Parameter {
   name: string;
@@ -46,7 +51,8 @@ interface Tool {
 interface CreateToolModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (tool: Tool) => void;
+  onSave: (tool: any) => void;
+  onAddCrewTool?: (toolId: string) => void;
   agentName?: string;
 }
 
@@ -54,9 +60,11 @@ export const CreateToolModal: React.FC<CreateToolModalProps> = ({
   isOpen,
   onClose,
   onSave,
+  onAddCrewTool,
   agentName = "New Agent"
 }) => {
-  const [activeTab, setActiveTab] = useState<'form' | 'code'>('form');
+  const [activeTab, setActiveTab] = useState<'form' | 'code' | 'marketplace'>('form');
+  const [searchQuery, setSearchQuery] = useState('');
   const [activeParamTab, setActiveParamTab] = useState<'query' | 'header' | 'path' | 'cookie' | 'body'>('query');
   const [tool, setTool] = useState<Tool>({
     name: '',
@@ -251,6 +259,13 @@ export const CreateToolModal: React.FC<CreateToolModalProps> = ({
                       <Code size={14} />
                       Code View
                     </button>
+                    <button
+                      onClick={() => setActiveTab('marketplace')}
+                      className={`px-4 py-2 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${activeTab === 'marketplace' ? 'bg-[#1A1A1A] text-white shadow-lg' : 'text-neutral-500 hover:text-neutral-300'}`}
+                    >
+                      <Sparkles size={14} />
+                      Marketplace
+                    </button>
                   </div>
 
                   <div className="flex items-center gap-3">
@@ -279,163 +294,218 @@ export const CreateToolModal: React.FC<CreateToolModalProps> = ({
                 </div>
 
                 {/* API Compile Section */}
-                <section className="space-y-6">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-xl font-black font-outfit uppercase tracking-tighter">API Compile</h3>
-                    <div className="flex bg-white/5 rounded-lg p-1 gap-1">
-                      <button className="px-3 py-1.5 rounded-md bg-[#1A1A1A] text-[10px] font-bold text-white shadow-sm">Path</button>
-                      <button className="px-3 py-1.5 rounded-md text-[10px] font-bold text-neutral-500 hover:text-neutral-300">Components</button>
-                    </div>
-                  </div>
-
-                  <div className="flex items-stretch gap-3">
-                    <div className="relative group">
-                      <select
-                        value={tool.method}
-                        onChange={(e) => setTool({ ...tool, method: e.target.value as any })}
-                        className="appearance-none bg-black/40 border border-white/10 rounded-xl px-5 py-3.5 pr-10 text-xs font-black text-mint-glow focus:outline-none focus:border-mint-glow/30 transition-all cursor-pointer h-full"
-                      >
-                        {httpMethods.map(m => <option key={m} className="bg-black" value={m}>{m}</option>)}
-                      </select>
-                      <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-500 pointer-events-none" />
+                {activeTab !== 'marketplace' && (
+                  <section className="space-y-6">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-xl font-black font-outfit uppercase tracking-tighter">API Compile</h3>
+                      <div className="flex bg-white/5 rounded-lg p-1 gap-1">
+                        <button className="px-3 py-1.5 rounded-md bg-[#1A1A1A] text-[10px] font-bold text-white shadow-sm">Path</button>
+                        <button className="px-3 py-1.5 rounded-md text-[10px] font-bold text-neutral-500 hover:text-neutral-300">Components</button>
+                      </div>
                     </div>
 
-                    <div className="flex-1 flex items-stretch gap-0 bg-black/40 border border-white/10 rounded-xl px-4 group focus-within:border-mint-glow/30 transition-all">
-                      <input
-                        className="bg-transparent text-sm text-neutral-300 font-mono focus:outline-none w-[200px] text-right"
-                        value={tool.baseUrl}
-                        onChange={(e) => setTool({ ...tool, baseUrl: e.target.value })}
-                        placeholder="http://base-url"
-                      />
-                      <div className="w-[1px] h-6 self-center bg-white/10 mx-4" />
-                      <input
-                        className="flex-1 bg-transparent text-sm font-mono focus:outline-none placeholder:text-neutral-700"
-                        value={tool.endpoint}
-                        onChange={(e) => setTool({ ...tool, endpoint: e.target.value })}
-                        placeholder="/api/example"
-                      />
+                    <div className="flex items-stretch gap-3">
+                      <div className="relative group">
+                        <select
+                          value={tool.method}
+                          onChange={(e) => setTool({ ...tool, method: e.target.value as any })}
+                          className="appearance-none bg-black/40 border border-white/10 rounded-xl px-5 py-3.5 pr-10 text-xs font-black text-mint-glow focus:outline-none focus:border-mint-glow/30 transition-all cursor-pointer h-full"
+                        >
+                          {httpMethods.map(m => <option key={m} className="bg-black" value={m}>{m}</option>)}
+                        </select>
+                        <ChevronDown size={14} className="absolute right-4 top-1/2 -translate-y-1/2 text-neutral-500 pointer-events-none" />
+                      </div>
+
+                      <div className="flex-1 flex items-stretch gap-0 bg-black/40 border border-white/10 rounded-xl px-4 group focus-within:border-mint-glow/30 transition-all">
+                        <input
+                          className="bg-transparent text-sm text-neutral-300 font-mono focus:outline-none w-[200px] text-right"
+                          value={tool.baseUrl}
+                          onChange={(e) => setTool({ ...tool, baseUrl: e.target.value })}
+                          placeholder="http://base-url"
+                        />
+                        <div className="w-[1px] h-6 self-center bg-white/10 mx-4" />
+                        <input
+                          className="flex-1 bg-transparent text-sm font-mono focus:outline-none placeholder:text-neutral-700"
+                          value={tool.endpoint}
+                          onChange={(e) => setTool({ ...tool, endpoint: e.target.value })}
+                          placeholder="/api/example"
+                        />
+                      </div>
                     </div>
-                  </div>
-                </section>
+                  </section>
+                )}
 
                 {/* Parameters Section */}
-                <section className="space-y-6">
-                  <div className="flex items-center justify-between border-b border-white/5 pb-4">
-                    <h3 className="text-lg font-bold">Parameters</h3>
-                    <ChevronDown size={20} className="text-neutral-600" />
-                  </div>
-
-                  <div className="flex bg-white/5 rounded-xl p-1 gap-1 w-fit">
-                    {(['query', 'header', 'path', 'cookie', 'body'] as const).map(tab => {
-                      const count = tool.parameters.filter(p => p.location === tab).length;
-                      return (
-                        <button
-                          key={tab}
-                          onClick={() => setActiveParamTab(tab)}
-                          className={`px-4 py-2 rounded-lg text-[10px] font-bold capitalize transition-all flex items-center gap-2 ${activeParamTab === tab ? 'bg-[#1A1A1A] text-white shadow-lg' : 'text-neutral-500 hover:text-neutral-300'}`}
-                        >
-                          {tab === 'query' ? 'Query Params' : tab === 'header' ? 'Headers' : tab === 'path' ? 'Path' : tab === 'cookie' ? 'Cookie' : 'Body'}
-                          {count > 0 && <span className="bg-mint-glow/20 text-mint-glow px-1.5 py-0.5 rounded text-[8px]">{count}</span>}
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  <div className="space-y-4">
-                    {/* Headers for the list */}
-                    {tool.parameters.filter(p => p.location === activeParamTab).length > 0 && (
-                      <div className="grid grid-cols-12 gap-4 px-4 py-2 text-[10px] font-black uppercase text-neutral-500 tracking-widest bg-white/[0.02] rounded-lg">
-                        <div className="col-span-3">Name</div>
-                        <div className="col-span-2">Type</div>
-                        <div className="col-span-2 text-center">Required</div>
-                        <div className="col-span-4">Description</div>
-                        <div className="col-span-1"></div>
-                      </div>
-                    )}
-
-                    <div className="space-y-2">
-                      <AnimatePresence>
-                        {tool.parameters.map((param, idx) => (
-                          param.location === activeParamTab && (
-                            <motion.div
-                              key={idx}
-                              initial={{ opacity: 0, x: -10 }}
-                              animate={{ opacity: 1, x: 0 }}
-                              exit={{ opacity: 0, x: 10 }}
-                              className="grid grid-cols-12 gap-4 px-4 py-3 bg-white/5 border border-white/5 rounded-xl items-center group"
-                            >
-                              <div className="col-span-3">
-                                <input
-                                  className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-mint-glow/30 transition-all font-medium"
-                                  value={param.name}
-                                  onChange={(e) => updateParameter(idx, { name: e.target.value })}
-                                  placeholder="param_name"
-                                />
-                              </div>
-                              <div className="col-span-2 relative">
-                                <select
-                                  className="w-full appearance-none bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-neutral-400 focus:outline-none focus:border-mint-glow/30 cursor-pointer"
-                                  value={param.type}
-                                  onChange={(e) => updateParameter(idx, { type: e.target.value as any })}
-                                >
-                                  {paramTypes.map(t => <option key={t} className="bg-black" value={t}>{t}</option>)}
-                                </select>
-                                <ChevronDown size={12} className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-600 pointer-events-none" />
-                              </div>
-                              <div className="col-span-2 flex justify-center">
-                                <button
-                                  onClick={() => updateParameter(idx, { required: !param.required })}
-                                  className={`w-8 h-4 rounded-full relative transition-colors duration-300 ${param.required ? 'bg-mint-glow' : 'bg-neutral-800'}`}
-                                >
-                                  <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all duration-300 ${param.required ? 'left-4.5 bg-black' : 'left-0.5'}`} />
-                                </button>
-                              </div>
-                              <div className="col-span-4">
-                                <input
-                                  className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-neutral-400 focus:outline-none focus:border-mint-glow/30 transition-all"
-                                  value={param.description}
-                                  onChange={(e) => updateParameter(idx, { description: e.target.value })}
-                                  placeholder="Describe this param"
-                                />
-                              </div>
-                              <div className="col-span-1 flex justify-end">
-                                <button
-                                  onClick={() => removeParameter(idx)}
-                                  className="p-2 text-neutral-600 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all"
-                                >
-                                  <Trash2 size={14} />
-                                </button>
-                              </div>
-                            </motion.div>
-                          )
-                        ))}
-                      </AnimatePresence>
+                {activeTab !== 'marketplace' && (
+                  <section className="space-y-6">
+                    <div className="flex items-center justify-between border-b border-white/5 pb-4">
+                      <h3 className="text-lg font-bold">Parameters</h3>
+                      <ChevronDown size={20} className="text-neutral-600" />
                     </div>
 
-                    <button
-                      onClick={addParameter}
-                      className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-white/[0.03] border border-dashed border-white/10 rounded-xl text-xs font-bold text-neutral-500 hover:text-white hover:bg-white/5 hover:border-mint-glow/30 transition-all mt-2"
-                    >
-                      <Plus size={14} />
-                      Add Parameter to {activeParamTab.charAt(0).toUpperCase() + activeParamTab.slice(1)}
-                    </button>
-                  </div>
-                </section>
+                    <div className="flex bg-white/5 rounded-xl p-1 gap-1 w-fit">
+                      {(['query', 'header', 'path', 'cookie', 'body'] as const).map(tab => {
+                        const count = tool.parameters.filter(p => p.location === tab).length;
+                        return (
+                          <button
+                            key={tab}
+                            onClick={() => setActiveParamTab(tab)}
+                            className={`px-4 py-2 rounded-lg text-[10px] font-bold capitalize transition-all flex items-center gap-2 ${activeParamTab === tab ? 'bg-[#1A1A1A] text-white shadow-lg' : 'text-neutral-500 hover:text-neutral-300'}`}
+                          >
+                            {tab === 'query' ? 'Query Params' : tab === 'header' ? 'Headers' : tab === 'path' ? 'Path' : tab === 'cookie' ? 'Cookie' : 'Body'}
+                            {count > 0 && <span className="bg-mint-glow/20 text-mint-glow px-1.5 py-0.5 rounded text-[8px]">{count}</span>}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <div className="space-y-4">
+                      {/* Headers for the list */}
+                      {tool.parameters.filter(p => p.location === activeParamTab).length > 0 && (
+                        <div className="grid grid-cols-12 gap-4 px-4 py-2 text-[10px] font-black uppercase text-neutral-500 tracking-widest bg-white/[0.02] rounded-lg">
+                          <div className="col-span-3">Name</div>
+                          <div className="col-span-2">Type</div>
+                          <div className="col-span-2 text-center">Required</div>
+                          <div className="col-span-4">Description</div>
+                          <div className="col-span-1"></div>
+                        </div>
+                      )}
+
+                      <div className="space-y-2">
+                        <AnimatePresence>
+                          {tool.parameters.map((param, idx) => (
+                            param.location === activeParamTab && (
+                              <motion.div
+                                key={idx}
+                                initial={{ opacity: 0, x: -10 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: 10 }}
+                                className="grid grid-cols-12 gap-4 px-4 py-3 bg-white/5 border border-white/5 rounded-xl items-center group"
+                              >
+                                <div className="col-span-3">
+                                  <input
+                                    className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-white focus:outline-none focus:border-mint-glow/30 transition-all font-medium"
+                                    value={param.name}
+                                    onChange={(e) => updateParameter(idx, { name: e.target.value })}
+                                    placeholder="param_name"
+                                  />
+                                </div>
+                                <div className="col-span-2 relative">
+                                  <select
+                                    className="w-full appearance-none bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-neutral-400 focus:outline-none focus:border-mint-glow/30 cursor-pointer"
+                                    value={param.type}
+                                    onChange={(e) => updateParameter(idx, { type: e.target.value as any })}
+                                  >
+                                    {paramTypes.map(t => <option key={t} className="bg-black" value={t}>{t}</option>)}
+                                  </select>
+                                  <ChevronDown size={12} className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-600 pointer-events-none" />
+                                </div>
+                                <div className="col-span-2 flex justify-center">
+                                  <button
+                                    onClick={() => updateParameter(idx, { required: !param.required })}
+                                    className={`w-8 h-4 rounded-full relative transition-colors duration-300 ${param.required ? 'bg-mint-glow' : 'bg-neutral-800'}`}
+                                  >
+                                    <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all duration-300 ${param.required ? 'left-4.5 bg-black' : 'left-0.5'}`} />
+                                  </button>
+                                </div>
+                                <div className="col-span-4">
+                                  <input
+                                    className="w-full bg-black/40 border border-white/10 rounded-lg px-3 py-1.5 text-xs text-neutral-400 focus:outline-none focus:border-mint-glow/30 transition-all"
+                                    value={param.description}
+                                    onChange={(e) => updateParameter(idx, { description: e.target.value })}
+                                    placeholder="Describe this param"
+                                  />
+                                </div>
+                                <div className="col-span-1 flex justify-end">
+                                  <button
+                                    onClick={() => removeParameter(idx)}
+                                    className="p-2 text-neutral-600 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all"
+                                  >
+                                    <Trash2 size={14} />
+                                  </button>
+                                </div>
+                              </motion.div>
+                            )
+                          ))}
+                        </AnimatePresence>
+                      </div>
+
+                      <button
+                        onClick={addParameter}
+                        className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-white/[0.03] border border-dashed border-white/10 rounded-xl text-xs font-bold text-neutral-500 hover:text-white hover:bg-white/5 hover:border-mint-glow/30 transition-all mt-2"
+                      >
+                        <Plus size={14} />
+                        Add Parameter to {activeParamTab.charAt(0).toUpperCase() + activeParamTab.slice(1)}
+                      </button>
+                    </div>
+                  </section>
+                )}
 
                 {/* Response Section */}
-                <section className="space-y-6 pt-10 border-t border-white/5">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-lg font-bold">Response</h3>
-                    <ChevronDown size={20} className="text-neutral-600" />
-                  </div>
+                {activeTab !== 'marketplace' && (
+                  <section className="space-y-6 pt-10 border-t border-white/5">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-bold">Response</h3>
+                      <ChevronDown size={20} className="text-neutral-600" />
+                    </div>
 
-                  <div className="flex items-center gap-4">
-                    <span className="text-xs font-bold text-neutral-500">Status Code:</span>
-                    <button className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-neutral-400 hover:text-white hover:bg-white/10 transition-all">
-                      <Plus size={16} />
-                    </button>
-                  </div>
-                </section>
+                    <div className="flex items-center gap-4">
+                      <span className="text-xs font-bold text-neutral-500">Status Code:</span>
+                      <button className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-neutral-400 hover:text-white hover:bg-white/10 transition-all">
+                        <Plus size={16} />
+                      </button>
+                    </div>
+                  </section>
+                )}
+
+                {activeTab === 'marketplace' && (
+                  <section className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="text-2xl font-black font-outfit uppercase tracking-tight">Tool Marketplace</h3>
+                        <p className="text-xs text-neutral-500 font-medium mt-1">Select from hundreds of pre-built CrewAI specialized tools.</p>
+                      </div>
+                      <div className="relative">
+                        <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-neutral-500" />
+                        <input
+                          type="text"
+                          placeholder="Search tools..."
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          className="bg-white/5 border border-white/10 rounded-xl pl-10 pr-4 py-2.5 text-xs focus:outline-none focus:border-mint-glow/30 w-[300px]"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                      {CREWAI_TOOLS.filter(t => t.name.toLowerCase().includes(searchQuery.toLowerCase()) || t.description.toLowerCase().includes(searchQuery.toLowerCase())).map((t) => (
+                        <div
+                          key={t.id}
+                          className="p-5 rounded-2xl bg-white/[0.02] border border-white/5 hover:border-mint-glow/30 hover:bg-white/[0.04] transition-all group cursor-pointer flex flex-col justify-between h-[180px]"
+                          onClick={() => {
+                            if (onAddCrewTool) onAddCrewTool(t.id);
+                            onClose();
+                          }}
+                        >
+                          <div>
+                            <div className="flex items-center justify-between mb-4">
+                              <div className="w-10 h-10 rounded-xl bg-mint-glow/10 flex items-center justify-center text-mint-glow group-hover:scale-110 transition-transform">
+                                {t.id.includes('Search') ? <Search size={20} /> : t.id.includes('Read') ? <Layout size={20} /> : t.id.includes('Code') ? <Cpu size={20} /> : <Database size={20} />}
+                              </div>
+                              <div className="px-2 py-1 rounded bg-white/5 text-[9px] font-black uppercase tracking-widest text-neutral-500 border border-white/5">CrewAI</div>
+                            </div>
+                            <h4 className="text-sm font-bold text-white mb-1 group-hover:text-mint-glow transition-colors">{t.name}</h4>
+                            <p className="text-xs text-neutral-500 line-clamp-2 leading-relaxed">{t.description}</p>
+                          </div>
+                          <div className="flex items-center justify-end gap-2 text-[10px] font-black uppercase tracking-widest text-mint-glow opacity-0 group-hover:opacity-100 transition-all">
+                            Import Tool
+                            <ChevronRight size={14} />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </section>
+                )}
 
               </div>
             </main>

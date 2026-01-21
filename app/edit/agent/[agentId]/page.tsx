@@ -41,6 +41,9 @@ import { ethers } from 'ethers';
 import CONTRACTS from '@/lib/contracts.json';
 import { toast } from 'react-toastify';
 import { supabase } from '@/lib/supabase';
+import { CREWAI_TOOLS } from '@/lib/crewai-tools';
+import { deployOrcaAgent, importGithubAgent } from '@/lib/deploy-actions';
+import { generateOrcaAgentCode } from '@/lib/agent-utils';
 
 interface MCPServer {
     id: string;
@@ -68,6 +71,10 @@ interface Shortcut {
 interface Tool {
     name: string;
     description: string;
+    baseUrl?: string;
+    endpoint?: string;
+    method?: string;
+    parameters?: any[];
 }
 
 export default function EditAgentPage() {
@@ -82,6 +89,7 @@ export default function EditAgentPage() {
     const [shortcuts, setShortcuts] = useState<Shortcut[]>([]);
     const [newShortcut, setNewShortcut] = useState('');
     const [tools, setTools] = useState<Tool[]>([]);
+    const [crewAITools, setCrewAITools] = useState<string[]>([]);
     const [mcpServers, setMcpServers] = useState<MCPServer[]>([]);
     const [capabilityType, setCapabilityType] = useState<'tool' | 'mcp'>('tool');
     const [authMethod, setAuthMethod] = useState('None');
@@ -91,6 +99,7 @@ export default function EditAgentPage() {
     const [showToolModal, setShowToolModal] = useState(false);
     const [showMCPModal, setShowMCPModal] = useState(false);
     const [isPreviewVisible, setIsPreviewVisible] = useState(true);
+    const [previewMode, setPreviewMode] = useState<'chat' | 'code'>('chat');
     const [showCopied, setShowCopied] = useState(false);
     const [messages, setMessages] = useState<Message[]>([
         { id: '1', text: 'Hello! I am your AI agent. How can I assist you today?', sender: 'agent', timestamp: new Date() }
@@ -311,6 +320,58 @@ export default function EditAgentPage() {
             });
         } finally {
             setIsPublishing(false);
+            // Refresh agent data
+            const { data } = await supabase.from('agents').select('*').eq('id', id).single();
+            if (data) setAgentData(data);
+        }
+    };
+
+    const [isDeploying, setIsDeploying] = useState(false);
+
+    const handleDeploy = async () => {
+        if (!agentData?.chain_agent_id) {
+            toast.error("Please register your agent on-chain first!");
+            return;
+        }
+
+        setIsDeploying(true);
+        const deployToast = toast.loading("Preparing Kubernetes deployment...");
+
+        try {
+            const config = {
+                name: agentName,
+                description: backgroundSetting,
+                greeting: greeting,
+                vaultAddress: wallet?.address || "",
+                tools: tools,
+                mcpServers: mcpServers,
+                crewAITools: crewAITools,
+                googleApiKey: "" // Will be provided by server env
+            };
+
+            const result = agentData?.github_url
+                ? await importGithubAgent(agentName, agentData.github_url)
+                : await deployOrcaAgent(id, config);
+
+            if (result.success) {
+                toast.update(deployToast, {
+                    render: `Agent deployed! URL: ${result.url}`,
+                    type: "success",
+                    isLoading: false,
+                    autoClose: 5000
+                });
+            } else {
+                throw new Error(result.error);
+            }
+        } catch (error: any) {
+            toast.update(deployToast, {
+                render: `Deployment failed: ${error.message}`,
+                type: "error",
+                isLoading: false,
+                autoClose: 5000
+            });
+        } finally {
+            setIsDeploying(false);
         }
     };
 
@@ -368,6 +429,10 @@ export default function EditAgentPage() {
 
     const removeTool = (index: number) => {
         setTools(prev => prev.filter((_, i) => i !== index));
+    };
+
+    const removeCrewTool = (index: number) => {
+        setCrewAITools(prev => prev.filter((_, i) => i !== index));
     };
 
     const addMcpServer = (serverData: any) => {
@@ -436,18 +501,35 @@ export default function EditAgentPage() {
                         </div>
                     </div>
                     <div className="h-8 w-[1px] bg-white/10 mx-1" />
-                    <button
-                        onClick={handlePublish}
-                        disabled={isPublishing}
-                        className={`flex items-center gap-2 px-5 py-2 bg-mint-glow text-black rounded-full text-xs font-black uppercase tracking-wider hover:brightness-110 active:scale-95 transition-all shadow-lg shadow-mint-glow/20 ${isPublishing ? 'opacity-50 cursor-not-allowed' : ''}`}
-                    >
-                        {isPublishing ? (
-                            <div className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" />
-                        ) : (
-                            <Share2 size={14} />
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={handlePublish}
+                            disabled={isPublishing}
+                            className={`flex items-center gap-2 px-5 py-2 ${agentData?.chain_agent_id ? 'bg-white/5 text-neutral-400 border border-white/10' : 'bg-mint-glow text-black'} rounded-full text-xs font-black uppercase tracking-wider hover:brightness-110 active:scale-95 transition-all shadow-lg ${isPublishing ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        >
+                            {isPublishing ? (
+                                <div className="w-4 h-4 border-2 border-current rounded-full animate-spin" />
+                            ) : (
+                                <Shield size={14} />
+                            )}
+                            {agentData?.chain_agent_id ? 'Agent Registered' : (isPublishing ? 'Registering...' : 'Register Agent')}
+                        </button>
+
+                        {agentData?.chain_agent_id && (
+                            <button
+                                onClick={handleDeploy}
+                                disabled={isDeploying}
+                                className="flex items-center gap-2 px-5 py-2 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-full text-xs font-black uppercase tracking-wider hover:brightness-110 active:scale-95 transition-all shadow-xl shadow-indigo-500/20"
+                            >
+                                {isDeploying ? (
+                                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                ) : (
+                                    <MonitorPlay size={14} />
+                                )}
+                                {isDeploying ? 'Deploying...' : 'One Click Deploy'}
+                            </button>
                         )}
-                        {isPublishing ? 'Publishing...' : 'Publish'}
-                    </button>
+                    </div>
                 </div>
             </header>
 
@@ -528,10 +610,10 @@ export default function EditAgentPage() {
                                     icon={Terminal}
                                     expanded={true}
                                     onAdd={() => setShowToolModal(true)}
-                                    badge={tools.length > 0 ? tools.length.toString() : undefined}
+                                    badge={(tools.length + crewAITools.length) > 0 ? (tools.length + crewAITools.length).toString() : undefined}
                                 >
                                     <div className="space-y-3">
-                                        {tools.length === 0 ? (
+                                        {(tools.length === 0 && crewAITools.length === 0) ? (
                                             <div className="p-8 rounded-xl bg-white/5 border border-dashed border-white/10 flex flex-col items-center justify-center gap-3 group/empty cursor-pointer" onClick={() => setShowToolModal(true)}>
                                                 <div className="p-3 bg-white/5 rounded-full text-neutral-500 group-hover/empty:scale-110 group-hover/empty:text-mint-glow transition-all">
                                                     <Plus size={20} />
@@ -539,25 +621,50 @@ export default function EditAgentPage() {
                                                 <span className="text-xs text-neutral-500 font-medium">No tools active. Add one to expand capabilities.</span>
                                             </div>
                                         ) : (
-                                            tools.map((tool, idx) => (
-                                                <div key={idx} className="p-4 rounded-xl bg-white/5 border border-white/5 flex items-center justify-between group">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-400">
-                                                            <Settings size={16} />
+                                            <>
+                                                {tools.map((tool, idx) => (
+                                                    <div key={`tool-${idx}`} className="p-4 rounded-xl bg-white/5 border border-white/5 flex items-center justify-between group">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-400">
+                                                                <Settings size={16} />
+                                                            </div>
+                                                            <div>
+                                                                <p className="text-xs font-bold text-white leading-none mb-1">{tool.name}</p>
+                                                                <p className="text-[10px] text-neutral-500 truncate w-40">{tool.description}</p>
+                                                            </div>
                                                         </div>
-                                                        <div>
-                                                            <p className="text-xs font-bold text-white leading-none mb-1">{tool.name}</p>
-                                                            <p className="text-[10px] text-neutral-500 truncate w-40">{tool.description}</p>
-                                                        </div>
+                                                        <button
+                                                            onClick={() => removeTool(idx)}
+                                                            className="p-2 opacity-0 group-hover:opacity-100 hover:text-red-400 transition-all"
+                                                        >
+                                                            <Trash2 size={14} />
+                                                        </button>
                                                     </div>
-                                                    <button
-                                                        onClick={() => removeTool(idx)}
-                                                        className="p-2 opacity-0 group-hover:opacity-100 hover:text-red-400 transition-all"
-                                                    >
-                                                        <Trash2 size={14} />
-                                                    </button>
-                                                </div>
-                                            ))
+                                                ))}
+
+                                                {crewAITools.map((toolId, idx) => {
+                                                    const tool = CREWAI_TOOLS.find(t => t.id === toolId);
+                                                    return (
+                                                        <div key={`crew-${idx}`} className="p-4 rounded-xl bg-white/5 border border-white/5 flex items-center justify-between group">
+                                                            <div className="flex items-center gap-3">
+                                                                <div className="w-8 h-8 rounded-lg bg-mint-glow/10 flex items-center justify-center text-mint-glow">
+                                                                    <Sparkles size={16} />
+                                                                </div>
+                                                                <div>
+                                                                    <p className="text-xs font-bold text-white leading-none mb-1">{tool?.name || toolId}</p>
+                                                                    <p className="text-[10px] text-neutral-500 truncate w-40">{tool?.description || 'CrewAI Tool'}</p>
+                                                                </div>
+                                                            </div>
+                                                            <button
+                                                                onClick={() => removeCrewTool(idx)}
+                                                                className="p-2 opacity-0 group-hover:opacity-100 hover:text-red-400 transition-all"
+                                                            >
+                                                                <Trash2 size={14} />
+                                                            </button>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </>
                                         )}
                                     </div>
                                 </ConfigSection>
@@ -737,83 +844,139 @@ export default function EditAgentPage() {
                                         Interactive Preview
                                     </h2>
                                     <div className="flex items-center gap-2">
+                                        <div className="flex bg-white/5 rounded-lg p-1 mr-2">
+                                            <button
+                                                onClick={() => setPreviewMode('chat')}
+                                                className={`px-3 py-1 rounded-md text-[10px] font-bold transition-all ${previewMode === 'chat' ? 'bg-[#1A1A1A] text-white shadow-sm' : 'text-neutral-500 hover:text-neutral-300'}`}
+                                            >
+                                                Chat
+                                            </button>
+                                            <button
+                                                onClick={() => setPreviewMode('code')}
+                                                className={`px-3 py-1 rounded-md text-[10px] font-bold transition-all ${previewMode === 'code' ? 'bg-[#1A1A1A] text-white shadow-sm' : 'text-neutral-500 hover:text-neutral-300'}`}
+                                            >
+                                                Code
+                                            </button>
+                                        </div>
                                         <button className="p-2 hover:bg-white/5 rounded-lg transition-colors text-neutral-500 group" onClick={() => setIsPreviewVisible(false)}>
                                             <X size={18} className="group-hover:text-white" />
-                                        </button>
-                                        <button className="p-2 hover:bg-white/5 rounded-lg transition-colors text-neutral-500">
-                                            <MoreHorizontal size={18} />
                                         </button>
                                     </div>
                                 </div>
 
                                 <div className="flex-1 flex flex-col p-6 overflow-hidden">
-                                    <div className="flex items-center gap-4 mb-8 shrink-0">
-                                        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-mint-glow/20 to-blue-600/20 border border-mint-glow/20 flex items-center justify-center relative shadow-lg shadow-mint-glow/5">
-                                            <Zap size={24} className="text-mint-glow" />
-                                            <motion.button
-                                                whileHover={{ scale: 1.1 }}
-                                                whileTap={{ scale: 0.9 }}
-                                                className="absolute -bottom-1 -right-1 w-6 h-6 bg-white rounded-full flex items-center justify-center shadow-lg border-2 border-[#0D0D0D] transition-transform"
-                                            >
-                                                <Plus size={12} className="text-black" />
-                                            </motion.button>
-                                        </div>
-                                        <div className="space-y-1">
-                                            <h3 className="font-bold text-base leading-tight text-white">{agentName}</h3>
-                                            <p className="text-[11px] text-neutral-500 font-mono tracking-tighter uppercase leading-none">ID: {id}</p>
-                                            <div className="flex gap-1.5 mt-2">
-                                                <div className="w-1.5 h-1.5 rounded-full bg-mint-glow animate-pulse" />
-                                                <span className="text-[9px] font-black uppercase tracking-widest text-mint-glow/80">Agent Online</span>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex-1 bg-black/40 rounded-3xl border border-white/10 flex flex-col overflow-hidden relative group shadow-inner">
-                                        <div className="flex-1 overflow-y-auto p-4 custom-scrollbar space-y-4">
-                                            {messages.map((msg) => (
-                                                <motion.div
-                                                    key={msg.id}
-                                                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
-                                                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                                                    className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
-                                                >
-                                                    <div className={`max-w-[85%] px-4 py-2.5 rounded-2xl text-xs font-medium leading-relaxed ${msg.sender === 'user'
-                                                        ? 'bg-mint-glow text-black'
-                                                        : 'bg-white/5 text-neutral-200 border border-white/5'
-                                                        }`}>
-                                                        {msg.text}
+                                    {previewMode === 'chat' ? (
+                                        <>
+                                            <div className="flex items-center gap-4 mb-8 shrink-0">
+                                                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-mint-glow/20 to-blue-600/20 border border-mint-glow/20 flex items-center justify-center relative shadow-lg shadow-mint-glow/5">
+                                                    <Zap size={24} className="text-mint-glow" />
+                                                    <motion.button
+                                                        whileHover={{ scale: 1.1 }}
+                                                        whileTap={{ scale: 0.9 }}
+                                                        className="absolute -bottom-1 -right-1 w-6 h-6 bg-white rounded-full flex items-center justify-center shadow-lg border-2 border-[#0D0D0D] transition-transform"
+                                                    >
+                                                        <Plus size={12} className="text-black" />
+                                                    </motion.button>
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <h3 className="font-bold text-base leading-tight text-white">{agentName}</h3>
+                                                    <p className="text-[11px] text-neutral-500 font-mono tracking-tighter uppercase leading-none">ID: {id}</p>
+                                                    <div className="flex gap-1.5 mt-2">
+                                                        <div className="w-1.5 h-1.5 rounded-full bg-mint-glow animate-pulse" />
+                                                        <span className="text-[9px] font-black uppercase tracking-widest text-mint-glow/80">Agent Online</span>
                                                     </div>
-                                                </motion.div>
-                                            ))}
-                                            <div ref={chatEndRef} />
-                                        </div>
-
-                                        <form onSubmit={handleSendMessage} className="p-4 bg-black/40 border-t border-white/5 backdrop-blur-md">
-                                            <div className="relative">
-                                                <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
-                                                    <button type="button" className="p-1.5 bg-white/5 rounded-lg hover:bg-white/10 transition-colors text-neutral-500">
-                                                        <Plus size={14} />
-                                                    </button>
-                                                </div>
-                                                <input
-                                                    type="text"
-                                                    placeholder="Test your agent..."
-                                                    className="w-full bg-white/5 border border-white/10 rounded-2xl py-3.5 px-12 text-sm focus:outline-none focus:border-mint-glow/30 transition-all font-medium placeholder:text-neutral-700"
-                                                    value={chatInput}
-                                                    onChange={(e) => setChatInput(e.target.value)}
-                                                />
-                                                <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
-                                                    {chatInput.trim() ? (
-                                                        <button type="submit" className="p-2 bg-mint-glow text-black rounded-xl hover:scale-105 active:scale-95 transition-all">
-                                                            <Send size={16} />
-                                                        </button>
-                                                    ) : (
-                                                        <Ghost size={16} className="text-neutral-700 mr-2" />
-                                                    )}
                                                 </div>
                                             </div>
-                                        </form>
-                                    </div>
+
+                                            <div className="flex-1 bg-black/40 rounded-3xl border border-white/10 flex flex-col overflow-hidden relative group shadow-inner">
+                                                <div className="flex-1 overflow-y-auto p-4 custom-scrollbar space-y-4">
+                                                    {messages.map((msg) => (
+                                                        <motion.div
+                                                            key={msg.id}
+                                                            initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                                                            className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+                                                        >
+                                                            <div className={`max-w-[85%] px-4 py-2.5 rounded-2xl text-xs font-medium leading-relaxed ${msg.sender === 'user'
+                                                                ? 'bg-mint-glow text-black'
+                                                                : 'bg-white/5 text-neutral-200 border border-white/5'
+                                                                }`}>
+                                                                {msg.text}
+                                                            </div>
+                                                        </motion.div>
+                                                    ))}
+                                                    <div ref={chatEndRef} />
+                                                </div>
+
+                                                <form onSubmit={handleSendMessage} className="p-4 bg-black/40 border-t border-white/5 backdrop-blur-md">
+                                                    <div className="relative">
+                                                        <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                                                            <button type="button" className="p-1.5 bg-white/5 rounded-lg hover:bg-white/10 transition-colors text-neutral-500">
+                                                                <Plus size={14} />
+                                                            </button>
+                                                        </div>
+                                                        <input
+                                                            type="text"
+                                                            placeholder="Test your agent..."
+                                                            className="w-full bg-white/5 border border-white/10 rounded-2xl py-3.5 px-12 text-sm focus:outline-none focus:border-mint-glow/30 transition-all font-medium placeholder:text-neutral-700"
+                                                            value={chatInput}
+                                                            onChange={(e) => setChatInput(e.target.value)}
+                                                        />
+                                                        <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2">
+                                                            {chatInput.trim() ? (
+                                                                <button type="submit" className="p-2 bg-mint-glow text-black rounded-xl hover:scale-105 active:scale-95 transition-all">
+                                                                    <Send size={16} />
+                                                                </button>
+                                                            ) : (
+                                                                <Ghost size={16} className="text-neutral-700 mr-2" />
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </form>
+                                            </div>
+                                        </>
+                                    ) : (
+                                        /* Code View */
+                                        <div className="flex-1 bg-black/40 rounded-3xl border border-white/10 flex flex-col overflow-hidden relative shadow-inner">
+                                            <div className="p-4 border-b border-white/5 flex items-center justify-between bg-white/[0.02]">
+                                                <span className="text-[10px] font-black text-neutral-500 uppercase tracking-widest flex items-center gap-2">
+                                                    <Terminal size={12} className="text-mint-glow" />
+                                                    agent.py (Autonomous Expert)
+                                                </span>
+                                                <button
+                                                    onClick={() => {
+                                                        const code = generateOrcaAgentCode(id, {
+                                                            name: agentName,
+                                                            description: backgroundSetting,
+                                                            greeting: greeting,
+                                                            vaultAddress: wallet?.address || "",
+                                                            tools: tools,
+                                                            mcpServers: mcpServers,
+                                                            crewAITools: crewAITools
+                                                        });
+                                                        navigator.clipboard.writeText(code);
+                                                        toast.success("Code copied to clipboard!");
+                                                    }}
+                                                    className="p-2 bg-white/5 rounded-lg hover:text-white text-neutral-500 transition-all"
+                                                >
+                                                    <Copy size={14} />
+                                                </button>
+                                            </div>
+                                            <div className="flex-1 overflow-auto custom-scrollbar p-6">
+                                                <pre className="text-[11px] font-mono text-neutral-400 leading-relaxed">
+                                                    {generateOrcaAgentCode(id, {
+                                                        name: agentName,
+                                                        description: backgroundSetting,
+                                                        greeting: greeting,
+                                                        vaultAddress: wallet?.address || "",
+                                                        tools: tools,
+                                                        mcpServers: mcpServers,
+                                                        crewAITools: crewAITools
+                                                    })}
+                                                </pre>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             </motion.div>
                         ) : (
@@ -833,7 +996,6 @@ export default function EditAgentPage() {
                             </motion.div>
                         )}
                     </AnimatePresence>
-
                 </div>
             </main>
 
@@ -843,8 +1005,19 @@ export default function EditAgentPage() {
                 onClose={() => setShowToolModal(false)}
                 agentName={agentName}
                 onSave={(newTool) => {
-                    setTools(prev => [...prev, { name: newTool.name, description: newTool.description }]);
+                    setTools(prev => [...prev, {
+                        name: newTool.name,
+                        description: newTool.description,
+                        baseUrl: newTool.baseUrl,
+                        endpoint: newTool.endpoint,
+                        method: newTool.method,
+                        parameters: newTool.parameters
+                    }]);
                     setShowToolModal(false);
+                }}
+                onAddCrewTool={(toolId) => {
+                    setCrewAITools(prev => [...prev, toolId]);
+                    toast.success(`Imported ${toolId} from CrewAI`);
                 }}
             />
 
