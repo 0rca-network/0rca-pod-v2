@@ -58,6 +58,13 @@ const agentOptions = [
         icon: Github,
         gradient: 'from-[#94a3b8] to-[#475569]',
     },
+    {
+        id: 'cdc-agent',
+        title: 'Crypto.com AI Agent',
+        description: 'Launch a specialized DeFi agent powered by the Crypto.com SDK.',
+        icon: Wallet,
+        gradient: 'from-[#002D74] to-[#0057E6]',
+    },
 ];
 
 const PRESET_ICONS = [
@@ -207,7 +214,11 @@ export default function CreateAgentPage() {
                 autoClose: 3000
             });
 
-            router.push(`/edit/agent/${agent.id}`);
+            if (selectedOption === 'cdc-agent') {
+                router.push(`/edit/cdc-agent/${agent.id}`);
+            } else {
+                router.push(`/edit/agent/${agent.id}`);
+            }
         } catch (error: any) {
             console.error('Finalization error:', error);
             toast.update(idToast, {
