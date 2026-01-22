@@ -34,7 +34,7 @@ export async function deployCDCAgent(agentId: string, config: AgentConfig) {
 
         const envVars = [
             { key: 'GOOGLE_API_KEY', value: config.googleApiKey || process.env.GOOGLE_API_KEY },
-            { key: 'GEMINI_API_KEY', value: config.googleApiKey || process.env.GOOGLE_API_KEY },
+            { key: 'GEMINI_API_KEY', value: config.geminiApiKey || config.googleApiKey || process.env.GOOGLE_API_KEY },
             { key: 'CDC_API_KEY', value: config.cdcApiKey },
             { key: 'CDC_PRIVATE_KEY', value: config.cdcPrivateKey },
             { key: 'ORCA_NETWORK', value: 'mainnet' }
@@ -96,7 +96,9 @@ export async function deployOrcaAgent(agentId: string, config: AgentConfig) {
 
         const envVars = [
             { key: 'GOOGLE_API_KEY', value: config.googleApiKey || process.env.GOOGLE_API_KEY },
-            { key: 'GEMINI_API_KEY', value: config.googleApiKey || process.env.GOOGLE_API_KEY },
+            { key: 'GEMINI_API_KEY', value: config.geminiApiKey || config.googleApiKey || process.env.GOOGLE_API_KEY },
+            { key: 'CDC_API_KEY', value: config.cdcApiKey },
+            { key: 'CDC_PRIVATE_KEY', value: config.cdcPrivateKey },
             { key: 'ORCA_NETWORK', value: 'mainnet' }
         ].filter(v => v.value);
 

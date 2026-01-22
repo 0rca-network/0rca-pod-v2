@@ -31,7 +31,12 @@ import {
     User,
     Lock,
     Maximize2,
-    MonitorPlay
+    MonitorPlay,
+    Bot,
+    Wallet,
+    Clock,
+    DollarSign,
+    Cpu
 } from 'lucide-react';
 import Link from 'next/link';
 import { CreateToolModal } from '@/components/CreateToolModal';
@@ -42,8 +47,8 @@ import CONTRACTS from '@/lib/contracts.json';
 import { toast } from 'react-toastify';
 import { supabase } from '@/lib/supabase';
 import { CREWAI_TOOLS } from '@/lib/crewai-tools';
-import { deployOrcaAgent, importGithubAgent } from '@/lib/deploy-actions';
-import { generateOrcaAgentCode } from '@/lib/agent-utils';
+import { deployOrcaAgent, deployCDCAgent, importGithubAgent } from '@/lib/deploy-actions';
+import { generateOrcaAgentCode, generateCDCAgentCode } from '@/lib/agent-utils';
 
 interface MCPServer {
     id: string;
@@ -95,6 +100,30 @@ export default function EditAgentPage() {
     const [authMethod, setAuthMethod] = useState('None');
     const [isAuthOpen, setIsAuthOpen] = useState(false);
 
+    // Agent Type Toggle
+    const [agentType, setAgentType] = useState<'orca' | 'cdc'>('orca');
+
+    // Environment Variables
+    const [googleApiKey, setGoogleApiKey] = useState('');
+    const [geminiApiKey, setGeminiApiKey] = useState('');
+    const [cdcApiKey, setCdcApiKey] = useState('');
+    const [cdcPrivateKey, setCdcPrivateKey] = useState('');
+    const [transferLimit, setTransferLimit] = useState('-1');
+    const [timeoutVal, setTimeoutVal] = useState('60');
+
+    // Registration Modal State
+    const [isRegModalOpen, setIsRegModalOpen] = useState(false);
+    const [regStep, setRegStep] = useState(0);
+    const [regError, setRegError] = useState<string | null>(null);
+
+    const regSteps = [
+        { label: 'Blockchain Network Check', description: 'Ensuring you are on Cronos Testnet' },
+        { label: 'Metadata IPFS Upload', description: 'Uploading agent profile to Pinata' },
+        { label: 'On-Chain Registration', description: 'Signing transaction to create unit identity' },
+        { label: 'Vault Activation', description: 'Deploying and linking your OrcaAgentVault' },
+        { label: 'Database Sync', description: 'Finalizing agent configuration' }
+    ];
+
     // UI State
     const [showToolModal, setShowToolModal] = useState(false);
     const [showMCPModal, setShowMCPModal] = useState(false);
@@ -129,6 +158,17 @@ export default function EditAgentPage() {
                 setAgentData(data);
                 setAgentName(data.name);
                 if (data.description) setBackgroundSetting(data.description);
+                if (data.google_api_key) setGoogleApiKey(data.google_api_key);
+                if (data.gemini_api_key) setGeminiApiKey(data.gemini_api_key);
+                if (data.cdc_api_key) setCdcApiKey(data.cdc_api_key);
+                if (data.cdc_private_key) setCdcPrivateKey(data.cdc_private_key);
+
+                // Load from JSON config if available (CDC specific)
+                if (data.config) {
+                    if (data.config.type === 'cdc-agent') setAgentType('cdc');
+                    if (data.config.transferLimit) setTransferLimit(data.config.transferLimit);
+                    if (data.config.timeout) setTimeoutVal(data.config.timeout);
+                }
             }
             setIsLoadingAgent(false);
         };
@@ -152,57 +192,96 @@ export default function EditAgentPage() {
         return () => clearInterval(interval);
     }, [wallet]);
 
+    const [isSaving, setIsSaving] = useState(false);
+
+    const handleSave = async () => {
+        if (id === 'new') return;
+        setIsSaving(true);
+        const saveToast = toast.loading("Saving configuration...");
+
+        try {
+            const { error } = await supabase
+                .from('agents')
+                .update({
+                    name: agentName,
+                    description: backgroundSetting,
+                    google_api_key: googleApiKey,
+                    gemini_api_key: geminiApiKey,
+                    cdc_api_key: cdcApiKey,
+                    cdc_private_key: cdcPrivateKey,
+                    config: {
+                        type: agentType === 'cdc' ? 'cdc-agent' : 'orca-agent',
+                        transferLimit,
+                        timeout: timeoutVal
+                    }
+                })
+                .eq('id', id);
+
+            if (error) throw error;
+
+            toast.update(saveToast, {
+                render: "Configuration saved successfully!",
+                type: "success",
+                isLoading: false,
+                autoClose: 3000
+            });
+        } catch (error: any) {
+            toast.update(saveToast, {
+                render: `Save failed: ${error.message}`,
+                type: "error",
+                isLoading: false,
+                autoClose: 5000
+            });
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
     const handlePublish = async () => {
         if (!authenticated || !wallet) {
             toast.error("Please connect your wallet first");
             return;
         }
 
+        if (agentType === 'cdc' && (!cdcApiKey || !cdcPrivateKey)) {
+            toast.error("CDC API Key and Private Key are mandatory for Crypto.com agents.");
+            return;
+        }
+
+        setIsRegModalOpen(true);
+        setRegStep(0);
+        setRegError(null);
         setIsPublishing(true);
-        const idToast = toast.loading("Registering agent on Cronos Testnet...");
 
         try {
-            // Ensure we are on Cronos Testnet (Chain ID 338)
+            // STEP 0: Network Check
             const currentChainId = wallet.chainId.includes(':')
                 ? wallet.chainId.split(':')[1]
                 : wallet.chainId;
 
             if (currentChainId !== '338') {
-                console.log("Switching to Cronos Testnet...");
                 try {
                     await wallet.switchChain(338);
-                    // Wait a moment for provider to refresh after switch
                     await new Promise(resolve => setTimeout(resolve, 1000));
                 } catch (switchError: any) {
-                    console.error("Failed to switch chain:", switchError);
-                    toast.error("Please switch your wallet to Cronos Testnet manually.");
-                    setIsPublishing(false);
-                    toast.dismiss(idToast);
-                    return;
+                    throw new Error("Failed to switch to Cronos Testnet. Please do it manually.");
                 }
             }
+            setRegStep(1);
 
-            // Get provider AFTER chain switch
+            // STEP 1: Metadata IPFS Upload
             const provider = await wallet.getEthereumProvider();
             const browserProvider = new ethers.BrowserProvider(provider);
             const signer = await browserProvider.getSigner();
 
-            // Double check network on the provider itself
-            const network = await browserProvider.getNetwork();
-            if (network.chainId !== BigInt(338)) {
-                throw new Error(`Wallet is still on network ${network.chainId}. Please switch to Cronos Testnet (338).`);
-            }
-
             const registryAddress = CONTRACTS.cronosTestnet.identityRegistry;
             const abi = [
                 "function register(string memory tokenUri) external returns (uint256 agentId)",
-                "event Registered(uint256 indexed agentId, string tokenURI, address indexed owner)"
+                "event Registered(uint256 indexed agentId, string tokenURI, address indexed owner)",
+                "function getMetadata(uint256 agentId, string memory key) external view returns (bytes memory)"
             ];
 
             const contract = new ethers.Contract(registryAddress, abi, signer);
-
-            // 1. Prepare Metadata for Pinata
-            toast.update(idToast, { render: "Uploading metadata to IPFS via Pinata...", type: "info", isLoading: true });
 
             const metadata = {
                 name: agentName,
@@ -212,7 +291,7 @@ export default function EditAgentPage() {
                     sourceCode: agentData?.github_url || "",
                     documentation: agentData?.github_url || "",
                     identityRegistry: registryAddress,
-                    portfolioVerifier: "0x5A86a43E9E08C450a7909e845Ea5E4d16A3C23F2", // Preset example
+                    portfolioVerifier: "0x5A86a43E9E08C450a7909e845Ea5E4d16A3C23F2",
                 },
                 pricing: {
                     model: "pay-per-validation",
@@ -228,101 +307,94 @@ export default function EditAgentPage() {
                 ],
                 technology: {
                     blockchain: "Cronos Testnet",
-                    smartContracts: "Solidity 0.8.20"
+                    agentType: agentType
                 },
-                description: backgroundSetting,
-                capabilities: {
-                    reputation: {
-                        acceptsFeedback: true,
-                        feedbackEnabled: true,
-                        reputationRegistry: `eip155:338:${CONTRACTS.cronosTestnet.reputationRegistry}`
-                    }
-                },
-                registrations: [
-                    {
-                        agentId: id,
-                        agentRegistry: `eip155:338:${registryAddress}`
-                    }
-                ]
+                description: backgroundSetting
             };
 
-            // Add Inference Endpoint if available
-            if (agentData?.inference_url) {
-                metadata.endpoints.push({
-                    name: "inferenceApi",
-                    version: "v1",
-                    endpoint: agentData.inference_url
-                });
-            }
-
-            // 2. Upload to Pinata
             const pinataRes = await fetch('/api/pinata', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(metadata)
             });
 
-            if (!pinataRes.ok) {
-                const error = await pinataRes.json();
-                throw new Error(error.error || "Failed to upload to IPFS");
-            }
-
+            if (!pinataRes.ok) throw new Error("Failed to upload to IPFS via Pinata");
             const pinataResult = await pinataRes.json();
             const ipfsUri = `ipfs://${pinataResult.IpfsHash}`;
 
-            // 3. Register on-chain
-            toast.update(idToast, { render: "Signing transaction on Cronos Testnet...", type: "info", isLoading: true });
+            setRegStep(2);
+
+            // STEP 2: On-Chain Registration
             const tx = await contract.register(ipfsUri);
-
-            toast.update(idToast, { render: "Waiting for transaction confirmation...", type: "info", isLoading: true });
-
             const receipt = await tx.wait();
-            console.log("Transaction receipt:", receipt);
 
-            // Extract AgentID from events if possible (EIP-8004 Registered event)
+            // Extract AgentID
             let contractAgentId = "";
-            try {
-                const log = receipt.logs.find((l: any) => l.address.toLowerCase() === registryAddress.toLowerCase());
-                if (log) {
-                    const parsed = contract.interface.parseLog(log);
-                    if (parsed?.name === 'Registered') {
-                        contractAgentId = parsed.args.agentId.toString();
-                    }
+            const log = receipt.logs.find((l: any) => l.address.toLowerCase() === registryAddress.toLowerCase());
+            if (log) {
+                const parsed = contract.interface.parseLog(log);
+                if (parsed?.name === 'Registered') {
+                    contractAgentId = parsed.args.agentId.toString();
                 }
-            } catch (e) {
-                console.warn("Could not parse agentId from logs:", e);
             }
 
-            // 4. Update Database
+            setRegStep(3);
+
+            // STEP 3: Vault Activation (Wait for it to be ready in registry)
+            let vaultAddr = "";
+            if (contractAgentId) {
+                // Poll for vault metadata if created by factory
+                for (let i = 0; i < 5; i++) {
+                    try {
+                        const vaultBytes = await contract.getMetadata(contractAgentId, "vault");
+                        if (vaultBytes && vaultBytes !== '0x') {
+                            vaultAddr = ethers.toUtf8String(vaultBytes);
+                            break;
+                        }
+                    } catch (e) { }
+                    await new Promise(r => setTimeout(r, 2000));
+                }
+            }
+
+            setRegStep(4);
+
+            // STEP 4: Database Sync
             await supabase
                 .from('agents')
                 .update({
                     ipfs_cid: pinataResult.IpfsHash,
                     chain_agent_id: contractAgentId || undefined,
                     contract_address: registryAddress,
-                    status: 'active'
+                    vault_address: vaultAddr || undefined,
+                    status: 'active',
+                    google_api_key: googleApiKey,
+                    gemini_api_key: geminiApiKey,
+                    cdc_api_key: cdcApiKey,
+                    cdc_private_key: cdcPrivateKey,
+                    config: {
+                        type: agentType === 'cdc' ? 'cdc-agent' : 'orca-agent',
+                        transferLimit,
+                        timeout: timeoutVal
+                    }
                 })
                 .eq('id', id);
 
-            toast.update(idToast, {
-                render: `Successfully registered agent on-chain!`,
-                type: "success",
-                isLoading: false,
-                autoClose: 5000
-            });
-        } catch (error: any) {
-            console.error("Publish error:", error);
-            toast.update(idToast, {
-                render: `Registration failed: ${error.message || "Unknown error"}`,
-                type: "error",
-                isLoading: false,
-                autoClose: 5000
-            });
-        } finally {
-            setIsPublishing(false);
-            // Refresh agent data
+            setRegStep(5);
+            toast.success("Agent registered and configured!");
+
+            // Reload data
             const { data } = await supabase.from('agents').select('*').eq('id', id).single();
             if (data) setAgentData(data);
+
+            // Close modal after tiny delay
+            setTimeout(() => setIsRegModalOpen(false), 2000);
+
+        } catch (error: any) {
+            console.error("Publish error:", error);
+            setRegError(error.message || "Unknown registration error");
+            toast.error(`Registration failed: ${error.message}`);
+        } finally {
+            setIsPublishing(false);
         }
     };
 
@@ -338,20 +410,30 @@ export default function EditAgentPage() {
         const deployToast = toast.loading("Preparing Kubernetes deployment...");
 
         try {
-            const config = {
+            const config: any = {
                 name: agentName,
                 description: backgroundSetting,
                 greeting: greeting,
-                vaultAddress: wallet?.address || "",
+                vaultAddress: agentData?.vault_address || wallet?.address || "",
                 tools: tools,
                 mcpServers: mcpServers,
                 crewAITools: crewAITools,
-                googleApiKey: "" // Will be provided by server env
+                googleApiKey: googleApiKey,
+                geminiApiKey: geminiApiKey,
+                cdcApiKey: cdcApiKey,
+                cdcPrivateKey: cdcPrivateKey,
+                transferLimit: transferLimit,
+                timeout: timeoutVal
             };
 
-            const result = agentData?.github_url
-                ? await importGithubAgent(agentName, agentData.github_url)
-                : await deployOrcaAgent(id, config);
+            let result;
+            if (agentData?.github_url) {
+                result = await importGithubAgent(agentName, agentData.github_url);
+            } else if (agentType === 'cdc') {
+                result = await deployCDCAgent(id, config);
+            } else {
+                result = await deployOrcaAgent(id, config);
+            }
 
             if (result.success) {
                 toast.update(deployToast, {
@@ -458,8 +540,8 @@ export default function EditAgentPage() {
                     </Link>
                     <div className="h-8 w-[1px] bg-white/10 mx-1" />
                     <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-mint-glow to-blue-600 flex items-center justify-center">
-                            <Zap size={16} className="text-black" />
+                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all shadow-lg ${agentType === 'orca' ? 'bg-gradient-to-br from-mint-glow to-blue-600' : 'bg-gradient-to-br from-[#002D74] to-[#011B45] shadow-blue-900/20'}`}>
+                            {agentType === 'orca' ? <Zap size={16} className="text-black" /> : <Bot size={16} className="text-white" />}
                         </div>
                         <div className="flex items-center gap-2 group">
                             {isEditingName ? (
@@ -478,12 +560,21 @@ export default function EditAgentPage() {
                                 </>
                             )}
                         </div>
-                        <div className="flex gap-2">
-                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-mint-glow/10 text-mint-glow border border-mint-glow/20 uppercase tracking-wider">Custom</span>
-                            <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-neutral-800 text-neutral-400 border border-white/5 flex items-center gap-1.5 uppercase tracking-wider">
-                                <div className="w-1.5 h-1.5 rounded-full bg-amber-500/80 animate-pulse" />
-                                Draft
-                            </span>
+
+                        {/* Agent Type Toggle */}
+                        <div className="flex bg-[#161616] rounded-full p-1 border border-white/5 ml-2 shadow-inner">
+                            <button
+                                onClick={() => setAgentType('orca')}
+                                className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest transition-all ${agentType === 'orca' ? 'bg-mint-glow text-black' : 'text-neutral-500 hover:text-white'}`}
+                            >
+                                Orca
+                            </button>
+                            <button
+                                onClick={() => setAgentType('cdc')}
+                                className={`px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest transition-all ${agentType === 'cdc' ? 'bg-blue-600 text-white' : 'text-neutral-500 hover:text-white'}`}
+                            >
+                                CDC
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -502,6 +593,19 @@ export default function EditAgentPage() {
                     </div>
                     <div className="h-8 w-[1px] bg-white/10 mx-1" />
                     <div className="flex items-center gap-2">
+                        <button
+                            onClick={handleSave}
+                            disabled={isSaving}
+                            className="flex items-center gap-2 px-4 py-2 bg-white/5 text-neutral-400 border border-white/10 rounded-full text-xs font-bold uppercase tracking-wider hover:bg-white/10 hover:text-white transition-all disabled:opacity-50"
+                        >
+                            {isSaving ? (
+                                <div className="w-4 h-4 border-2 border-neutral-400 border-t-transparent rounded-full animate-spin" />
+                            ) : (
+                                <Save size={14} />
+                            )}
+                            Save
+                        </button>
+
                         <button
                             onClick={handlePublish}
                             disabled={isPublishing}
@@ -737,6 +841,46 @@ export default function EditAgentPage() {
                                 </div>
                             </ConfigSection>
 
+                            {agentType === 'cdc' && (
+                                <ConfigSection title="CDC SDK Configuration" icon={Cpu} expanded={true}>
+                                    <div className="space-y-4">
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="space-y-2">
+                                                <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest ml-1">Transfer Limit</label>
+                                                <div className="relative group">
+                                                    <input
+                                                        type="number"
+                                                        className="w-full bg-black/40 border border-white/5 rounded-xl pl-10 pr-4 py-2.5 text-xs text-neutral-300 focus:outline-none focus:border-blue-500/30 transition-all"
+                                                        placeholder="-1"
+                                                        value={transferLimit}
+                                                        onChange={(e) => setTransferLimit(e.target.value)}
+                                                    />
+                                                    <DollarSign size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-600 group-focus-within:text-blue-400 transition-colors" />
+                                                </div>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label className="text-[10px] font-black text-neutral-500 uppercase tracking-widest ml-1">Timeout (s)</label>
+                                                <div className="relative group">
+                                                    <input
+                                                        type="number"
+                                                        className="w-full bg-black/40 border border-white/5 rounded-xl pl-10 pr-4 py-2.5 text-xs text-neutral-300 focus:outline-none focus:border-blue-500/30 transition-all"
+                                                        placeholder="60"
+                                                        value={timeoutVal}
+                                                        onChange={(e) => setTimeoutVal(e.target.value)}
+                                                    />
+                                                    <Clock size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-600 group-focus-within:text-blue-400 transition-colors" />
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="p-3 bg-blue-500/5 border border-blue-500/10 rounded-xl">
+                                            <p className="text-[10px] text-blue-400 font-medium leading-relaxed">
+                                                Advanced DeFi settings for your Crypto.com agent.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </ConfigSection>
+                            )}
+
                             <ConfigSection
                                 title="Shortcuts"
                                 icon={Zap}
@@ -823,6 +967,73 @@ export default function EditAgentPage() {
                                             </motion.div>
                                         )}
                                     </AnimatePresence>
+                                </div>
+                            </ConfigSection>
+
+                            <ConfigSection title="Environment Variables" icon={Settings} expanded={false}>
+                                <div className="space-y-4">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-neutral-600 uppercase tracking-widest ml-1">Gemini API Key</label>
+                                        <div className="relative group">
+                                            <input
+                                                type="password"
+                                                className="w-full bg-black/40 border border-white/5 rounded-xl pl-10 pr-4 py-2.5 text-xs text-neutral-300 focus:outline-none focus:border-mint-glow/30 transition-all font-mono"
+                                                placeholder="GEMINI_API_KEY"
+                                                value={geminiApiKey}
+                                                onChange={(e) => setGeminiApiKey(e.target.value)}
+                                            />
+                                            <Sparkles size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-600 group-focus-within:text-mint-glow transition-colors" />
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-neutral-600 uppercase tracking-widest ml-1">Google API Key</label>
+                                        <div className="relative group">
+                                            <input
+                                                type="password"
+                                                className="w-full bg-black/40 border border-white/5 rounded-xl pl-10 pr-4 py-2.5 text-xs text-neutral-300 focus:outline-none focus:border-mint-glow/30 transition-all font-mono"
+                                                placeholder="GOOGLE_API_KEY"
+                                                value={googleApiKey}
+                                                onChange={(e) => setGoogleApiKey(e.target.value)}
+                                            />
+                                            <Key size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-600 group-focus-within:text-mint-glow transition-colors" />
+                                        </div>
+                                    </div>
+
+                                    {agentType === 'cdc' && (
+                                        <>
+                                            <div className="space-y-2">
+                                                <label className="text-[10px] font-black text-neutral-600 uppercase tracking-widest ml-1">CDC API Key</label>
+                                                <div className="relative group">
+                                                    <input
+                                                        type="password"
+                                                        className="w-full bg-black/40 border border-white/5 rounded-xl pl-10 pr-4 py-2.5 text-xs text-neutral-300 focus:outline-none focus:border-blue-500/30 transition-all font-mono"
+                                                        placeholder="CDC_API_KEY (Mandatory for CDC)"
+                                                        value={cdcApiKey}
+                                                        onChange={(e) => setCdcApiKey(e.target.value)}
+                                                    />
+                                                    <Zap size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-600 group-focus-within:text-blue-400 transition-colors" />
+                                                </div>
+                                            </div>
+
+                                            <div className="space-y-2">
+                                                <label className="text-[10px] font-black text-neutral-600 uppercase tracking-widest ml-1">CDC Private Key</label>
+                                                <div className="relative group">
+                                                    <input
+                                                        type="password"
+                                                        className="w-full bg-black/40 border border-white/5 rounded-xl pl-10 pr-4 py-2.5 text-xs text-neutral-300 focus:outline-none focus:border-blue-500/30 transition-all font-mono"
+                                                        placeholder="CDC_AGENT_PRIVATE_KEY (Mandatory for CDC)"
+                                                        value={cdcPrivateKey}
+                                                        onChange={(e) => setCdcPrivateKey(e.target.value)}
+                                                    />
+                                                    <Shield size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-neutral-600 group-focus-within:text-blue-400 transition-colors" />
+                                                </div>
+                                            </div>
+                                        </>
+                                    )}
+                                    <p className="text-[10px] text-neutral-500 font-medium italic mt-2 px-1">
+                                        * These keys are passed directly to the agent for deployment and logic execution.
+                                    </p>
                                 </div>
                             </ConfigSection>
                         </div>
@@ -945,15 +1156,20 @@ export default function EditAgentPage() {
                                                 </span>
                                                 <button
                                                     onClick={() => {
-                                                        const code = generateOrcaAgentCode(id, {
+                                                        const config = {
                                                             name: agentName,
                                                             description: backgroundSetting,
                                                             greeting: greeting,
-                                                            vaultAddress: wallet?.address || "",
+                                                            vaultAddress: agentData?.vault_address || wallet?.address || "",
                                                             tools: tools,
                                                             mcpServers: mcpServers,
-                                                            crewAITools: crewAITools
-                                                        });
+                                                            crewAITools: crewAITools,
+                                                            transferLimit: transferLimit,
+                                                            timeout: timeoutVal
+                                                        };
+                                                        const code = agentType === 'cdc'
+                                                            ? generateCDCAgentCode(id, config)
+                                                            : generateOrcaAgentCode(id, config);
                                                         navigator.clipboard.writeText(code);
                                                         toast.success("Code copied to clipboard!");
                                                     }}
@@ -964,11 +1180,21 @@ export default function EditAgentPage() {
                                             </div>
                                             <div className="flex-1 overflow-auto custom-scrollbar p-6">
                                                 <pre className="text-[11px] font-mono text-neutral-400 leading-relaxed">
-                                                    {generateOrcaAgentCode(id, {
+                                                    {agentType === 'cdc' ? generateCDCAgentCode(id, {
                                                         name: agentName,
                                                         description: backgroundSetting,
                                                         greeting: greeting,
-                                                        vaultAddress: wallet?.address || "",
+                                                        vaultAddress: agentData?.vault_address || wallet?.address || "",
+                                                        tools: tools,
+                                                        mcpServers: mcpServers,
+                                                        crewAITools: crewAITools,
+                                                        transferLimit: transferLimit,
+                                                        timeout: timeoutVal
+                                                    }) : generateOrcaAgentCode(id, {
+                                                        name: agentName,
+                                                        description: backgroundSetting,
+                                                        greeting: greeting,
+                                                        vaultAddress: agentData?.vault_address || wallet?.address || "",
                                                         tools: tools,
                                                         mcpServers: mcpServers,
                                                         crewAITools: crewAITools
@@ -1025,6 +1251,14 @@ export default function EditAgentPage() {
                 isOpen={showMCPModal}
                 onClose={() => setShowMCPModal(false)}
                 onAdd={addMcpServer}
+            />
+
+            <RegistrationProgressModal
+                isOpen={isRegModalOpen}
+                currentStep={regStep}
+                steps={regSteps}
+                error={regError}
+                onClose={() => setIsRegModalOpen(false)}
             />
 
             {/* Global Background Elements */}
@@ -1178,6 +1412,109 @@ function ConfigSection({
                     </motion.div>
                 )}
             </AnimatePresence>
+        </div>
+    );
+}
+
+function RegistrationProgressModal({ isOpen, currentStep, steps, error, onClose }: {
+    isOpen: boolean,
+    currentStep: number,
+    steps: { label: string, description: string }[],
+    error: string | null,
+    onClose: () => void
+}) {
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+                onClick={error ? onClose : undefined}
+            />
+            <motion.div
+                initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                className="relative w-full max-w-md bg-[#0D0D0D] border border-white/10 rounded-3xl overflow-hidden shadow-2xl shadow-mint-glow/5"
+            >
+                <div className="p-8">
+                    <div className="flex items-center justify-between mb-8">
+                        <div>
+                            <h3 className="text-xl font-black text-white tracking-tight leading-none mb-2">Agent Registration</h3>
+                            <p className="text-[11px] text-neutral-500 font-medium uppercase tracking-widest">Protocol Verification in progress</p>
+                        </div>
+                        <div className="w-12 h-12 rounded-2xl bg-mint-glow/10 flex items-center justify-center">
+                            {error ? (
+                                <X size={24} className="text-red-500" />
+                            ) : (
+                                <Zap size={24} className="text-mint-glow animate-pulse" />
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="space-y-6">
+                        {steps.map((step, idx) => {
+                            const isDone = idx < currentStep;
+                            const isCurrent = idx === currentStep;
+                            const isPending = idx > currentStep;
+
+                            return (
+                                <div key={idx} className="flex gap-4 group">
+                                    <div className="flex flex-col items-center">
+                                        <div className={`w-6 h-6 rounded-full flex items-center justify-center border-2 transition-all duration-500 ${isDone ? 'bg-mint-glow border-mint-glow' :
+                                            isCurrent ? 'border-mint-glow bg-mint-glow/10' :
+                                                'border-white/5 bg-white/5'
+                                            }`}>
+                                            {isDone ? (
+                                                <Check size={12} strokeWidth={4} className="text-black" />
+                                            ) : isCurrent ? (
+                                                <div className="w-1.5 h-1.5 rounded-full bg-mint-glow animate-ping" />
+                                            ) : (
+                                                <div className="w-1 h-1 rounded-full bg-neutral-800" />
+                                            )}
+                                        </div>
+                                        {idx < steps.length - 1 && (
+                                            <div className={`w-[2px] flex-1 my-1 rounded-full transition-colors duration-500 ${isDone ? 'bg-mint-glow' : 'bg-white/5'}`} />
+                                        )}
+                                    </div>
+                                    <div className={`pb-4 transition-all duration-300 ${isPending ? 'opacity-30' : 'opacity-100'}`}>
+                                        <p className={`text-[13px] font-bold leading-none mb-1.5 ${isCurrent ? 'text-white' : 'text-neutral-400'}`}>
+                                            {step.label}
+                                        </p>
+                                        <p className="text-[11px] text-neutral-600 font-medium leading-relaxed italic">
+                                            {isCurrent ? (error || step.description) : step.description}
+                                        </p>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+
+                    {error && (
+                        <div className="mt-8 p-4 bg-red-500/10 border border-red-500/20 rounded-2xl">
+                            <p className="text-xs text-red-400 font-medium leading-relaxed">{error}</p>
+                            <button
+                                onClick={onClose}
+                                className="mt-4 w-full py-2.5 bg-red-500 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:brightness-110 active:scale-95 transition-all"
+                            >
+                                Close & Retry
+                            </button>
+                        </div>
+                    )}
+
+                    {!error && currentStep === steps.length && (
+                        <motion.div
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="mt-8 p-4 bg-mint-glow/10 border border-mint-glow/20 rounded-2xl flex items-center justify-center gap-3"
+                        >
+                            <Sparkles size={16} className="text-mint-glow" />
+                            <span className="text-xs font-black text-mint-glow uppercase tracking-widest">Protocol Sync Complete</span>
+                        </motion.div>
+                    )}
+                </div>
+            </motion.div>
         </div>
     );
 }

@@ -7,6 +7,7 @@ export interface AgentConfig {
     transferLimit?: string;
     timeout?: string;
     googleApiKey?: string;
+    geminiApiKey?: string;
     vaultAddress?: string;
     tools?: any[];
     mcpServers?: any[];
